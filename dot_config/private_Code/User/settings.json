@@ -1,0 +1,17 @@
+{
+    "workbench.sideBar.location": "right",
+    "terminal.integrated.fontFamily": "FiraCode Nerd Font Mono",
+    "editor.fontFamily": "'FiraCode Nerd Font', 'monospace', monospace",
+    "editor.minimap.enabled": false,
+    "files.insertFinalNewline": true,
+    "editor.unicodeHighlight.allowedLocales": {
+        "ru": true
+    },
+    "workbench.editor.limit.enabled": true,
+    "workbench.editor.limit.perEditorGroup": true,
+    "workbench.editor.limit.value": 5,
+    "debug.inlineValues": "off",
+    "files.trimTrailingWhitespace": true,
+    "files.trimFinalNewlines": true,
+    "keyboard.dispatch": "keyCode",
+}
