@@ -1,0 +1,9 @@
+gui:
+  theme:
+    selectedLineBgColor:
+      - black
+    optionsTextColor:
+      - cyan
+  paging:
+    colorArg: always
+    pager: delta --dark --paging=never
