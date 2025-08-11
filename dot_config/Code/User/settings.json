@@ -1,0 +1,296 @@
+{
+  "[python]": {
+    "editor.formatOnPaste": false,
+    "editor.defaultFormatter": "ms-python.black-formatter",
+  },
+  "editor.foldingImportsByDefault": false,
+  "workbench.editorAssociations": {
+    "{git,gitlens,conflictResolution,vscode-local-history}:/**/*.tc.json": "default",
+    "*.ipynb": "jupyter-notebook",
+    "*.md": "default",
+    "*.html": "default",
+    "*.jpg": "imagePreview.previewEditor",
+    "*.csv": "default",
+    "*.PNG": "imagePreview.previewEditor",
+    "*.svg": "default",
+    "{git,gitlens}:/**/*.{md,csv}": "default"
+  },
+  "notebook.cellToolbarLocation": {
+    "default": "right",
+    "jupyter-notebook": "right"
+  },
+  "git.ignoreMissingGitWarning": true,
+  "jupyter.askForKernelRestart": false,
+  "jupyter.jupyterServerType": "local",
+  "security.workspace.trust.untrustedFiles": "open",
+  "enableTelemetry": false,
+  "discord.idleTimeout": 600,
+
+  "editor.quickSuggestions": {
+    "other": true,
+    "comments": true,
+    "strings": true
+  },
+  "editor.wordBasedSuggestions": "matchingDocuments",
+  "editor.formatOnPaste": false,
+  "editor.snippetSuggestions": "top",
+  "editor.suggestSelection": "first",
+  "vsintellicode.modify.editor.suggestSelection": "automaticallyOverrodeDefaultValue",
+  "explorer.confirmDelete": false,
+  "notebook.lineNumbers": "on",
+  "editor.cursorSmoothCaretAnimation": "on",
+  "editor.renderWhitespace": "selection",
+  "editor.minimap.enabled": false,
+  "git.autofetch": true,
+  "git.postCommitCommand": "push",
+  "notebook.output.textLineLimit": 10,
+  "workbench.sideBar.location": "right",
+  "terminal.integrated.gpuAcceleration": "off",
+  "editor.bracketPairColorization.enabled": true,
+  "editor.guides.bracketPairs": "active",
+  "peacock.favoriteColors": [
+    {
+      "name": "Angular Red",
+      "value": "#dd0531"
+    },
+    {
+      "name": "Azure Blue",
+      "value": "#007fff"
+    },
+    {
+      "name": "JavaScript Yellow",
+      "value": "#f9e64f"
+    },
+    {
+      "name": "Mandalorian Blue",
+      "value": "#1857a4"
+    },
+    {
+      "name": "Node Green",
+      "value": "#215732"
+    },
+    {
+      "name": "React Blue",
+      "value": "#61dafb"
+    },
+    {
+      "name": "Something Different",
+      "value": "#832561"
+    },
+    {
+      "name": "Svelte Orange",
+      "value": "#ff3d00"
+    },
+    {
+      "name": "Vue Green",
+      "value": "#42b883"
+    }
+  ],
+  "task.problemMatchers.neverPrompt": {
+    "shell": true
+  },
+  "vim.disableExtension": true,
+  "diffEditor.ignoreTrimWhitespace": false,
+  "liveServer.settings.donotShowInfoMsg": true,
+  "update.mode": "manual",
+  "python.languageServer": "Pylance",
+  "python.formatting.blackArgs": ["--line-length", "80"],
+  "files.associations": {
+    "*.ts": "typescriptreact",
+    ".env": "plaintext"
+  },
+  "terminal.integrated.cursorStyle": "line",
+  "tailwindCSS.includeLanguages": {
+    "plaintext": "astro",
+    "astro": "html"
+  },
+  "template-string-converter.addBracketsToProps": true,
+  "template-string-converter.validLanguages": [
+    "svelte",
+    "typescript",
+    "javascript",
+    "typescriptreact",
+    "javascriptreact"
+  ],
+  "typescript.updateImportsOnFileMove.enabled": "always",
+  "javascript.updateImportsOnFileMove.enabled": "always",
+  "todo-tree.general.tags": [
+    "BUG",
+    "HACK",
+    "FIXME",
+    "TODO",
+    "XXX",
+    "[ ]",
+    "[x]",
+    "POGME"
+  ],
+  "redhat.telemetry.enabled": true,
+  "explorer.confirmDragAndDrop": false,
+  "jupyter.themeMatplotlibPlots": true,
+  "editor.experimental.useCustomCodeActionMenu": true,
+  "[typescriptreact]": {
+    "editor.defaultFormatter": "esbenp.prettier-vscode"
+  },
+  "prettier.tslintIntegration": true,
+  "html.format.wrapAttributes": "force",
+  "[html]": {
+    "editor.defaultFormatter": "vscode.html-language-features"
+  },
+  "[json]": {
+    "editor.defaultFormatter": "vscode.json-language-features"
+  },
+  "autoDocstring.docstringFormat": "sphinx",
+  "gitlens.advanced.messages": {
+    "suppressGitDisabledWarning": true,
+    "suppressGitMissingWarning": true,
+    "suppressLineUncommittedWarning": true
+  },
+  "[jsonc]": {
+    "editor.defaultFormatter": "esbenp.prettier-vscode"
+  },
+  "editor.stickyScroll.enabled": true,
+  "editor.inlineSuggest.enabled": true,
+  "arduino.useArduinoCli": true,
+  "files.autoSave": "onFocusChange",
+  "github.copilot.enable": {
+    "*": true,
+    "yaml": false,
+    "plaintext": true,
+    "markdown": true,
+    "scminput": false
+  },
+  "git.allowForcePush": true,
+  "editor.accessibilitySupport": "off",
+  "editor.inlineSuggest.showToolbar": "always",
+  "[css]": {
+    "editor.defaultFormatter": "vscode.css-language-features"
+  },
+  "[caddyfile]": {
+    "editor.indentSize": "tabSize",
+    "editor.guides.indentation": true,
+    "editor.insertSpaces": false,
+    "editor.formatOnSave": true
+  },
+  "gitlens.codeLens.recentChange.enabled": false,
+  "gitlens.codeLens.recentChange.command": false,
+  "gitlens.codeLens.authors.enabled": false,
+  "[javascript]": {
+    "editor.defaultFormatter": "esbenp.prettier-vscode"
+  },
+  "[lua]": {
+    "editor.defaultFormatter": "JohnnyMorganz.stylua"
+  },
+  "settingsSync.ignoredExtensions": [
+    "vsciot-vscode.vscode-arduino",
+    "ronaldosena.arduino-snippets",
+    "cweijan.vscode-autohotkey-plus",
+    "mark-wiemer.vscode-autohotkey-plus-plus"
+  ],
+  "terminal.integrated.fontFamily": "FiraCode Nerd Font Mono",
+  "[gdscript]": {
+    "editor.defaultFormatter": "poeticAndroid.pretty-gd"
+  },
+  "git.confirmForcePush": false,
+  "files.insertFinalNewline": true,
+  "[markdown]": {
+    "editor.quickSuggestions": {
+      "strings": "on",
+      "comments": "on"
+    },
+    "editor.defaultFormatter": "esbenp.prettier-vscode"
+  },
+  "window.titleBarStyle": "custom",
+  "files.trimTrailingWhitespace": true,
+  "files.trimFinalNewlines": true,
+  "[yaml]": {
+    "editor.defaultFormatter": "esbenp.prettier-vscode"
+  },
+  "workbench.editor.empty.hint": "hidden",
+  "[xml]": {
+    "editor.defaultFormatter": "redhat.vscode-xml"
+  },
+  "accessibility.signals.lineHasError": {
+    "sound": "on"
+  },
+  "accessibility.signals.lineHasWarning": {
+    "sound": "on"
+  },
+  "accessibility.signals.lineHasFoldedArea": {
+    "sound": "on"
+  },
+  "accessibility.signals.lineHasBreakpoint": {
+    "sound": "on"
+  },
+  "accessibility.signals.lineHasInlineSuggestion": {
+    "sound": "on"
+  },
+  "accessibility.signals.onDebugBreak": {
+    "sound": "on"
+  },
+  "playwright.reuseBrowser": false,
+  "security.promptForLocalFileProtocolHandling": false,
+  "go-lines.lineLength": 80,
+  "workbench.productIconTheme": "bongocat",
+  "amazonQ.showInlineCodeSuggestionsWithCodeReferences": false,
+  "workbench.editor.limit.enabled": true,
+  "workbench.editor.limit.perEditorGroup": true,
+  "workbench.editor.limit.value": 3,
+  "gitlens.launchpad.indicator.enabled": false,
+  "godotTools.lsp.serverPort": 6005,
+  "indentRainbow.errorColor": "",
+  "glsllint.additionalStageAssociations": {
+    ".gdshader": "frag",
+    ".gdshaderinc": "frag"
+  },
+  "git.confirmSync": false,
+  "window.confirmSaveUntitledWorkspace": false,
+  "git.replaceTagsWhenPull": true,
+  "accessibility.signalOptions.volume": 1,
+  "vscode-pets.theme": "forest",
+  "vscode-pets.throwBallWithMouse": true,
+  "vscode-pets.petSize": "medium",
+  "window.zoomLevel": 0.7,
+  "yaml.format.enable": false,
+  "supermaven.enable": {
+    "*": true
+  },
+  "explorer.fileNesting.patterns": {
+    "*.ts": "${capture}.js",
+    "*.js": "${capture}.js.map, ${capture}.min.js, ${capture}.d.ts",
+    "*.jsx": "${capture}.js",
+    "*.tsx": "${capture}.ts",
+    "tsconfig.json": "tsconfig.*.json",
+    "package.json": "package-lock.json, yarn.lock, pnpm-lock.yaml, bun.lockb",
+    "*.sqlite": "${capture}.${extname}-*",
+    "*.db": "${capture}.${extname}-*",
+    "*.sqlite3": "${capture}.${extname}-*",
+    "*.db3": "${capture}.${extname}-*",
+    "*.sdb": "${capture}.${extname}-*",
+    "*.s3db": "${capture}.${extname}-*"
+  },
+  "[astro]": {
+    "editor.defaultFormatter": "esbenp.prettier-vscode"
+  },
+  "debug.inlineValues": "off",
+  "[ansible]": {
+    "editor.defaultFormatter": "esbenp.prettier-vscode"
+  },
+  "git.enableSmartCommit": true,
+  "Prettier-SQL.SQLFlavourOverride": "postgresql",
+  "Prettier-SQL.commaPosition": "before",
+  "chat.commandCenter.enabled": false,
+  "workbench.experimental.share.enabled": true,
+  "docker.extension.enableComposeLanguageServer": false,
+  "search.followSymlinks": false,
+  "webgl-glsl-editor.diagnostics": false,
+  "webgl-glsl-editor.strictRename": false,
+  "[glsl]": {
+    "editor.defaultFormatter": "raczzalan.webgl-glsl-editor"
+  },
+  "rust-analyzer.debug.buildBeforeRestart": true,
+  "rust-analyzer.testExplorer": true,
+  "editor.inlayHints.enabled": "off",
+  "vite.autoStart": false,
+  "supermaven.allowGitignore": false,
+  "camouflage.enabled": false
+}
