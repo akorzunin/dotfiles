@@ -1,6 +1,6 @@
 # export extensions
 
-code --list-extensions > extensions.txt
+code --list-extensions > ext.txt
 
 # install from file
 

@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+#!/usr/bin/env python
 """
 sync.py – tiny dot-files helper
 
@@ -29,7 +29,7 @@ def home_path(relative: str) -> Path:
     return HOME / relative
 
 def confirm(prompt: str) -> bool:
-    return input(prompt).strip().lower() in {"y", "yes"}
+    return input(prompt).strip().lower() in {"y", "yes", ""}
 
 def copy_with_merge(src: Path, dst: Path):
     """Copy file or directory tree, overwriting existing files."""
@@ -72,7 +72,7 @@ def cmd_get(relative: str):
         print(f"Source does not exist: {src}")
         sys.exit(1)
     print(f"Copying {src} → {dst}")
-    if dst.exists() and not confirm("Destination already exists, overwrite? [y/N] "):
+    if dst.exists() and not confirm("Destination already exists, overwrite? [Y/n] "):
         print("Aborted.")
         sys.exit(1)
     if dst.is_dir() and not dst.is_symlink():
@@ -131,7 +131,7 @@ def cmd_link(relative: str):
         print(f"Source directory does not exist: {repo_dir}")
         sys.exit(1)
     if home_dir.exists() or home_dir.is_symlink():
-        if not confirm(f"{home_dir} already exists. Replace with symlink? [y/N] "):
+        if not confirm(f"{home_dir} already exists. Replace with symlink? [Y/n] "):
             print("Aborted.")
             sys.exit(1)
         if home_dir.is_dir() and not home_dir.is_symlink():

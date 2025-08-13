@@ -4,6 +4,7 @@ alias l = lazygit
 alias n = nvim
 alias f = fzf
 alias c = clear
+alias p = python
 alias he = hyprctl dispatch exit
 def hc [] {
   hyprctl clients -j |
@@ -22,8 +23,9 @@ def hm [] {
 alias lsgpu = lspci -d ::03xx
 def tiktok [] {
   let addr = "192.168.1.126"
-  print $"Scannin ports for adb \(40k - 47k) on ($addr)"
-  let out = (rustscan -r 40000-47000 --scan-order random -a 192.168.1.126 -g -t 400)
+  print Scannin ports for adb
+  print "rustscan -r 34000-47000 --scan-order random -a 192.168.1.126 -g -t 400"
+  let out = (rustscan -r 34000-47000 --scan-order random -a 192.168.1.126 -g -t 400)
   print $out
   let p = ($out | parse $"($addr) -> [{port}]" | get port | first)
   let user_input = (input --default Y $"Connect to port ($p)? \(Y/n)")

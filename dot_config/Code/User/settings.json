@@ -1,8 +1,9 @@
 {
   "[python]": {
     "editor.formatOnPaste": false,
-    "editor.defaultFormatter": "ms-python.black-formatter",
+    "editor.defaultFormatter": "ms-python.black-formatter"
   },
+  "keyboard.dispatch": "keyCode",
   "editor.foldingImportsByDefault": false,
   "workbench.editorAssociations": {
     "{git,gitlens,conflictResolution,vscode-local-history}:/**/*.tc.json": "default",

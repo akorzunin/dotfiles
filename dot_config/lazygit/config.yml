@@ -4,3 +4,4 @@ gui:
       - black
     optionsTextColor:
       - cyan
+promptToReturnFromSubprocess: false
