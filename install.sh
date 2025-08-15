@@ -6,6 +6,8 @@ sync.py link .config/lazygit/config.yml
 sync.py link .config/oh-my-posh/base.yaml
 sync.py link .local/bin/ssh-sel.nu
 
+cp -r ./dot_config/zellij ~/.config/
+
 # copy vscode config
 zsh -c 'mkdir -p ~/.config/Code/User'
 cp -r dot_config/Code/User ~/.config/Code/User

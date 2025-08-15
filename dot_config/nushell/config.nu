@@ -42,6 +42,7 @@ $env.PAGER = "/usr/bin/less"
 $env.LESS = "--mouse --wheel-lines=3"
 $env.SYSTEMD_PAGER = "/usr/bin/less"
 $env.SYSTEMD_LESS = "--mouse --wheel-lines=3 -R"
+$env.PATH = ($env.PATH | append '~/.local/bin')
 
 # oh-my-posh init nu
 oh-my-posh init nu --config ~/.config/oh-my-posh/base.yaml
