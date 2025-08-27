@@ -5,6 +5,7 @@ sync.py link .config/nushell/config.nu
 sync.py link .config/lazygit/config.yml
 sync.py link .config/oh-my-posh/base.yaml
 sync.py link .local/bin/ssh-sel.nu
+sync.py link .local/bin/tiktok.nu
 
 cp -r ./dot_config/zellij ~/.config/
 

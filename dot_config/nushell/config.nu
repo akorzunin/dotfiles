@@ -28,22 +28,6 @@ def hm [] {
   jq
 }
 alias lsgpu = lspci -d ::03xx
-def tiktok [] {
-  # let addr = "192.168.1.126"
-  let addr = "192.168.31.197"
-  print Scannin ports for adb
-  print "rustscan -r 34000-47000 --scan-order random -a 192.168.31.197 -g -t 400"
-  let out = (rustscan -r 34000-47000 --scan-order random -a 192.168.31.197 -g -t 400)
-  print $out
-  let p = ($out | parse $"($addr) -> [{port}]" | get port | first)
-  let user_input = (input --default Y $"Connect to port ($p)? \(Y/n)")
-  if ($user_input | str trim | str starts-with "n") {
-    print "Aborting"
-    return
-  }
-  adb connect $"($addr):($p)"
-  scrcpy --no-video --audio-buffer=400
-}
 
 $env.EDITOR = "nvim"
 $env.PAGER = "/usr/bin/less"
