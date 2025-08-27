@@ -10,7 +10,7 @@ cp -r ./dot_config/zellij ~/.config/
 
 # copy vscode config
 zsh -c 'mkdir -p ~/.config/Code/User'
-cp -r dot_config/Code/User ~/.config/Code/User
+cp -r dot_config/Code/User ~/.config/Code
 # sync (symlinks not gonna work)
 sync.py get ~/.config/Code/User/keybindings.json
 sync.py put ~/.config/Code/User/keybindings.json

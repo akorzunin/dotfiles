@@ -5,6 +5,7 @@ alias n = nvim
 alias f = fzf
 alias c = clear
 alias p = python
+alias h = htop
 alias he = hyprctl dispatch exit
 def hc [] {
   hyprctl clients -j |
@@ -13,6 +14,12 @@ def hc [] {
   to json |
   jq
 }
+def batt [] {
+  upower -i /org/freedesktop/UPower/devices/battery_BAT0
+  | grep -E "state|to full|percentage"
+}
+alias battery = batt
+alias b = batt
 def hm [] {
   hyprctl monitors all -j |
   from json |
@@ -22,10 +29,11 @@ def hm [] {
 }
 alias lsgpu = lspci -d ::03xx
 def tiktok [] {
-  let addr = "192.168.1.126"
+  # let addr = "192.168.1.126"
+  let addr = "192.168.31.197"
   print Scannin ports for adb
-  print "rustscan -r 34000-47000 --scan-order random -a 192.168.1.126 -g -t 400"
-  let out = (rustscan -r 34000-47000 --scan-order random -a 192.168.1.126 -g -t 400)
+  print "rustscan -r 34000-47000 --scan-order random -a 192.168.31.197 -g -t 400"
+  let out = (rustscan -r 34000-47000 --scan-order random -a 192.168.31.197 -g -t 400)
   print $out
   let p = ($out | parse $"($addr) -> [{port}]" | get port | first)
   let user_input = (input --default Y $"Connect to port ($p)? \(Y/n)")
@@ -48,3 +56,14 @@ $env.PATH = ($env.PATH | append '~/.local/bin')
 oh-my-posh init nu --config ~/.config/oh-my-posh/base.yaml
 source ~/.zoxide.nu
 alias cd = z
+alias dt = zsh -c date
+
+alias nhh = nvim ~/.config/hypr/hyprland.conf
+alias nhm = nvim ~/.config/hypr/monitors.conf
+alias nhr = nvim ~/.config/hypr/windowrules.conf
+alias nhw = nvim ~/.config/hypr/windowrules.conf
+alias nhs = nvim ~/.config/hypr/startup.conf
+alias nhb = nvim ~/.config/hypr/binds.conf
+
+alias nc = config nu
+
