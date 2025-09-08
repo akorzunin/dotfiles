@@ -31,9 +31,9 @@ alias lsgpu = lspci -d ::03xx
 
 $env.EDITOR = "nvim"
 $env.PAGER = "/usr/bin/less"
-$env.LESS = "--mouse --wheel-lines=3"
-$env.SYSTEMD_PAGER = "/usr/bin/less"
-$env.SYSTEMD_LESS = "--mouse --wheel-lines=3 -R"
+$env.LESS = "-R --mouse --wheel-lines=3"
+$env.SYSTEMD_PAGER = $env.PAGER
+$env.SYSTEMD_LESS = $env.LESS
 $env.PATH = ($env.PATH | append '~/.local/bin')
 
 # oh-my-posh init nu
@@ -50,4 +50,12 @@ alias nhs = nvim ~/.config/hypr/startup.conf
 alias nhb = nvim ~/.config/hypr/binds.conf
 
 alias nc = config nu
+
+$env.ANI_CLI_HIST_DIR = $env.HOME + "/Dropbox/ani-cli"
+$env.BAT_STYLE = "plain"
+$env.BAT_THEME = "ansi"
+def lsblk [] {
+    ^lsblk -o NAME,FSTYPE,TYPE,SIZE,MOUNTPOINTS,UUID
+    | bat -l conf
+}
 

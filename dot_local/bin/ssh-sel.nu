@@ -4,6 +4,7 @@ def main [
     file: path = "/etc/ansible/hosts"
     --host (-h): string = ""
     --copyid (-c)
+    --printcmd (-p)
 ] {
     let inv  = (open -r $file | from yaml)
     print $"Loaded inventory from ($file)"
@@ -24,6 +25,15 @@ def main [
     print $"Selected host: (ansi green)($sel_host)(ansi reset)"
     let h = ($hosts | select $sel_host | flatten | first)
     let ssh_cmd = $"($h.ansible_user)@($h.ansible_host) -p ($h.ansible_port)"
+    match $printcmd {
+        true => {
+            echo $ssh_cmd | tee { wl-copy }
+            return
+        }
+        false => {
+            null
+        }
+    }
     print $"Connecting: ($ssh_cmd)"
     match $copyid {
         true => {
