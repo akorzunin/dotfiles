@@ -58,4 +58,6 @@ def lsblk [] {
     ^lsblk -o NAME,FSTYPE,TYPE,SIZE,MOUNTPOINTS,UUID
     | bat -l conf
 }
+alias pf = poweroff
+alias rb = reboot
 
