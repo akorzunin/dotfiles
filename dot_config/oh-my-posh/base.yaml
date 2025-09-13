@@ -1,5 +1,10 @@
 # yaml-language-server: $schema=https://raw.githubusercontent.com/JanDeDobbeleer/oh-my-posh/main/themes/schema.json
 
+palette:
+  primary: "#1e40af"
+  secondary: "#172554"
+  text: "#000000"
+
 console_title_template: "{{if .Root}} ⚡ {{end}}{{.Folder | replace \"~\" \"🏠\"}}\n@ {{.HostName}}"
 blocks:
   - type: prompt
@@ -11,7 +16,7 @@ blocks:
         trailing_diamond: 
         template: " {{ .Icon }} "
         foreground: "#FFFFFF"
-        background: "#172554"
+        background: p:secondary
         type: os
         style: diamond
       - properties:
@@ -27,13 +32,12 @@ blocks:
           cache_duration: none
           folder_icon: ...
           folder_separator_icon: <transparent>  </>
-          home_icon: 
           style: agnoster_short
-        leading_diamond: "<transparent,#1e40af>\ue0b0</>"
+        leading_diamond: "<transparent,p:primary>\ue0b0</>"
         trailing_diamond: 
         template: " {{ .Path }} "
-        foreground: "#172554"
-        background: "#1e40af"
+        foreground: p:text
+        background: p:primary
         type: path
         style: diamond
       - properties:
@@ -41,7 +45,7 @@ blocks:
           fetch_stash_count: true
           fetch_status: true
           fetch_upstream_icon: true
-        template: " {{ .UpstreamIcon }}{{ .HEAD }}{{ if .Staging.Changed }} \uf046 {{ .Staging.String }}{{ end }}{{ if and (.Working.Changed) (.Staging.Changed) }} |{{ end }}{{ if .Working.Changed }} \uf044 {{ .Working.String }}{{ end }}{{ if gt .StashCount 0 }} \ueb4b {{ .StashCount }}{{ end }} "
+        template: " {{ .UpstreamIcon }} {{ .HEAD }} {{ .BranchStatus }}{{ if .Staging.Changed }} \uf046 {{ .Staging.String }}{{ end }}{{ if and (.Working.Changed) (.Staging.Changed) }} |{{ end }}{{ if .Working.Changed }} \uf044 {{ .Working.String }}{{ end }}{{ if gt .StashCount 0 }} \ueb4b {{ .StashCount }}{{ end }} "
         foreground: "#FFFFFF"
         powerline_symbol: 
         background: "#15803d"
@@ -67,11 +71,16 @@ blocks:
           cache_duration: none
           style: dallas
           threshold: 0
-        leading_diamond: "<#1e40af,transparent>\ue0b2</>"
+        leading_diamond: "<p:primary, transparent>\ue0b2</>"
         template: " {{ .FormattedMs }}s "
-        foreground: "#172554"
-        background: "#1e40af"
+        foreground: p:secondary
+        background: p:primary
         type: executiontime
         style: diamond
+      - type: session
+        style: diamond
+        foreground: "#ca8a04"
+        background: p:primary
+        template: "{{ if .SSHSession }} {{ .UserName }}@{{ .HostName }} {{ end }}"
 version: 3
 final_space: true
