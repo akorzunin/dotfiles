@@ -35,7 +35,7 @@ $env.LESS = "-R --mouse --wheel-lines=3"
 $env.SYSTEMD_PAGER = $env.PAGER
 $env.SYSTEMD_LESS = $env.LESS
 $env.PATH = ($env.PATH | append '~/.local/bin')
-
+$env.PATH = ($env.PATH | append '~/.npm-global/bin')
 # oh-my-posh init nu
 oh-my-posh init nu --config ~/.config/oh-my-posh/base.yaml
 source ~/.zoxide.nu
