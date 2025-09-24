@@ -60,4 +60,13 @@ def lsblk [] {
 }
 alias pf = poweroff
 alias rb = reboot
+def я [] {
+  print ((
+    [71 111 108 111 118 107 97 32 111 116 32 104 121 97] 
+    | each { char --integer $in } 
+    | str join
+  ))
+  hyprctl switchxkblayout all 0
+  __zoxide_z
+}
 
