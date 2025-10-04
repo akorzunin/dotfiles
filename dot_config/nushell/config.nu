@@ -71,4 +71,5 @@ def я [] {
 }
 alias sv = sudo v2raya
 alias ts = sudo -E timeshift-launcher
+alias record-selection = zsh -c 'wf-recorder -g "$(slurp)" -f a.mp4'
 
