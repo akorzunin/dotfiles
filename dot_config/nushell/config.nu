@@ -75,4 +75,16 @@ alias record-selection = zsh -c 'wf-recorder -g "$(slurp)" -f a.mp4'
 alias gp = git pull
 alias gpr = git pull --rebase
 alias gf = git fetch
+alias upd = sudo pacman -Syyu
+alias task = go-task
+$env.config = (
+    $env.config
+    | upsert hooks.pre_execution [ {||
+        $env.repl_commandline = (commandline)
+        if ($env.repl_commandline =~ '^\P{ascii}') {
+          print "Swapping layout"
+          hyprctl switchxkblayout all 0
+        }
+    } ]
+)
 
