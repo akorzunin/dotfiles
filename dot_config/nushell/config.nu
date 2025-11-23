@@ -88,3 +88,15 @@ $env.config = (
     } ]
 )
 
+def desktop-sync [] {
+  print "Checking for changes..."
+  print $"(ansi green)Neovim config:(ansi reset)"
+  git -C ~/.config/nvim/ status -s
+  print ""
+  print $"(ansi green)Hyprland config:(ansi reset)"
+  git -C ~/Documents/hyprconf/ status -s
+  print ""
+  print $"(ansi green)Dotfiles:(ansi reset)"
+  git -C ~/Documents/dotfiles/ status -s
+}
+
