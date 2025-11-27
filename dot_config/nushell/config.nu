@@ -92,11 +92,26 @@ def desktop-sync [] {
   print "Checking for changes..."
   print $"(ansi green)Neovim config:(ansi reset)"
   git -C ~/.config/nvim/ status -s
+  print $"Up: (git rev-list --count main..origin/main) Down: (git rev-list --count origin/main..main)"
   print ""
   print $"(ansi green)Hyprland config:(ansi reset)"
   git -C ~/Documents/hyprconf/ status -s
+  print $"Up: (git rev-list --count main..origin/main) Down: (git rev-list --count origin/main..main)"
+  print ""
   print ""
   print $"(ansi green)Dotfiles:(ansi reset)"
   git -C ~/Documents/dotfiles/ status -s
+  print $"Up: (git rev-list --count main..origin/main) Down: (git rev-list --count origin/main..main)"
+  print ""
 }
 
+def ff-compress [file: path, out?: string, --crf (-c): int = 23] {
+  print $"Compressing ($file) to ($out | default $"($file).out.mp4")"
+  ffpb -i $file -vcodec libx264 -crf $crf ($out | default $"($file).out.mp4")
+}
+
+def fl [] {
+  do --ignore-errors {
+    nautilus . e> /dev/null
+  }
+}
