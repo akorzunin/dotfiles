@@ -89,20 +89,18 @@ $env.config = (
 )
 
 def desktop-sync [] {
-  print "Checking for changes..."
-  print $"(ansi green)Neovim config:(ansi reset)"
-  git -C ~/.config/nvim/ status -s
-  print $"Up: (git rev-list --count main..origin/main) Down: (git rev-list --count origin/main..main)"
-  print ""
-  print $"(ansi green)Hyprland config:(ansi reset)"
-  git -C ~/Documents/hyprconf/ status -s
-  print $"Up: (git rev-list --count main..origin/main) Down: (git rev-list --count origin/main..main)"
-  print ""
-  print ""
-  print $"(ansi green)Dotfiles:(ansi reset)"
-  git -C ~/Documents/dotfiles/ status -s
-  print $"Up: (git rev-list --count main..origin/main) Down: (git rev-list --count origin/main..main)"
-  print ""
+  def check_repo [repo_path: path, name: string] {
+    print -n $"(ansi green)($name) config:(ansi reset)"
+    print -n $" (git -C $repo_path rev-parse --abbrev-ref HEAD) "
+    print -n $"(git -C $repo_path status --porcelain=v2 -b |
+      find branch.ab | parse '{a} {branch} {ab}' | get ab | to text
+    )"
+    git -C $repo_path status -s
+    print ""
+  }
+  check_repo ~/.config/nvim/ "Neovim"
+  check_repo ~/Documents/hyprconf/ "Hyprland"
+  check_repo ~/Documents/dotfiles/ "Dotfiles"
 }
 
 def ff-compress [file: path, out?: string, --crf (-c): int = 23] {
