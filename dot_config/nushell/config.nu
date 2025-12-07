@@ -113,3 +113,23 @@ def fl [] {
     nautilus . e> /dev/null
   }
 }
+
+# History search
+def hs [
+  --execute (-e)  # Execute the command instead of copying it
+] {
+  let command = history
+      | get command
+      | reverse
+      | to text
+      | fzf
+      | str trim --right
+
+  $command | wl-copy
+  if $execute {
+    print $"Executing: ($command)"
+    nu -c $command
+  } else {
+    print $"Copying: ($command)"
+  }
+}
