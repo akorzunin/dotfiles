@@ -2,7 +2,7 @@
 
 def main [
   --addr (-a): string = "192.168.1.126"
-  --portrange (-r): string = "34000-47000"
+  --portrange (-r): string = "33000-47000"
 ] {
   print 'Scanning ports for adb'
   print $"rustscan ($portrange) ($addr)"

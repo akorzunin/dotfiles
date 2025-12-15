@@ -4,6 +4,7 @@ alias l = lazygit
 alias n = nvim
 alias f = fzf
 alias c = clear
+alias py = python
 alias p = python
 alias h = htop
 alias he = hyprctl dispatch exit
@@ -124,7 +125,9 @@ def hs [
       | to text
       | fzf
       | str trim --right
-
+  if ($command | is-empty) {
+    return
+  }
   $command | wl-copy
   if $execute {
     print $"Executing: ($command)"
@@ -133,3 +136,4 @@ def hs [
     print $"Copying: ($command)"
   }
 }
+alias mpv = mpv --ao=pulse

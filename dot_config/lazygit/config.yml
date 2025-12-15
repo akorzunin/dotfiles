@@ -5,3 +5,5 @@ gui:
     optionsTextColor:
       - cyan
 promptToReturnFromSubprocess: false
+git:
+  overrideGpg: true
