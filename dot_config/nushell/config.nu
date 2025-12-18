@@ -92,6 +92,7 @@ $env.config = (
 def desktop-sync [] {
   def check_repo [repo_path: path, name: string] {
     print -n $"(ansi green)($name) config:(ansi reset)"
+    git -C $repo_path fetch | ignore
     print -n $" (git -C $repo_path rev-parse --abbrev-ref HEAD) "
     print -n $"(git -C $repo_path status --porcelain=v2 -b |
       find branch.ab | parse '{a} {branch} {ab}' | get ab | to text
