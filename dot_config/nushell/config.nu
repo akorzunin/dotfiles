@@ -71,7 +71,7 @@ def я [] {
   __zoxide_z
 }
 alias sv = sudo v2raya
-alias ts = sudo -E timeshift-launcher
+alias ts = timeshift-launcher
 alias record-selection = zsh -c 'wf-recorder -g "$(slurp)" -f a.mp4'
 alias gp = git pull
 alias gpr = git pull --rebase
