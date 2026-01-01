@@ -138,3 +138,22 @@ def hs [
   }
 }
 alias mpv = mpv --ao=pulse
+# Open recent project
+def po [
+  --editor (-e): string = "code"
+  --projectsdir (-p): path = "~/Documents"
+] {
+  let projects_dir = ($projectsdir | path expand)
+  let projects_path = ($projects_dir + "/" + (
+      ls $projects_dir
+      | sort-by modified
+      | reverse
+      | get name
+      | split column '/'
+      | get ($in | columns | last)
+      | to text
+      | fzf
+    )
+  ) | path expand
+  ^$editor $projects_path
+}
