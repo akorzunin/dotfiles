@@ -138,6 +138,7 @@ def hs [
   }
 }
 alias mpv = mpv --ao=pulse
+
 # Open recent project
 def po [
   --editor (-e): string = "code"
@@ -146,13 +147,25 @@ def po [
   let projects_dir = ($projectsdir | path expand)
   let projects_path = ($projects_dir + "/" + (
       ls $projects_dir
-      | sort-by modified
-      | reverse
-      | get name
-      | split column '/'
-      | get ($in | columns | last)
-      | to text
+      | each {|e|
+        let git_date = do --ignore-errors {
+          git -C $e.name log -1 --format=%cI e> /dev/null | into datetime
+        }
+        return {
+          ...$e,
+          last_git_commit_date: ($git_date | default $e.modified),
+        }
+      }
+      | sort-by last_git_commit_date -r
+      | select name last_git_commit_date
+      | update name {$in | split column '/' | get ($in | columns | last) | last }
+      | update last_git_commit_date {$in | date humanize }
+      | to csv -n -s '|'
+      | ^column -s '|' -t -o ' | '
       | fzf
+      | split column ' | '
+      | get ($in | columns |first)
+      | first
     )
   ) | path expand
   ^$editor $projects_path
