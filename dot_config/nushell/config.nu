@@ -170,3 +170,4 @@ def po [
   ) | path expand
   ^$editor $projects_path
 }
+alias pre-commit = uvx prek
