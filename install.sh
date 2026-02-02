@@ -7,7 +7,7 @@ sync.py link .config/oh-my-posh/base.yaml
 sync.py link .local/bin/ssh-sel.nu
 sync.py link .local/bin/tiktok.nu
 
-cp -r ./dot_config/zellij ~/.config/
+cp -r ~/Documents/dotfiles/dot_config/zellij ~/.config/
 
 # copy vscode config
 zsh -c 'mkdir -p ~/.config/Code/User'

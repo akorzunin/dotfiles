@@ -145,7 +145,7 @@ def po [
   --projectsdir (-p): path = "~/Documents"
 ] {
   let projects_dir = ($projectsdir | path expand)
-  let projects_path = ($projects_dir + "/" + (
+  let selected_project = ($projects_dir + "/" + (
       ls $projects_dir
       | each {|e|
         let git_date = do --ignore-errors {
@@ -163,11 +163,15 @@ def po [
       | to csv -n -s '|'
       | ^column -s '|' -t -o ' | '
       | fzf
+    )
+  )
+  let projects_path = (
+    $selected_project
       | split column ' | '
       | get ($in | columns |first)
       | first
-    )
-  ) | path expand
+      | path expand
+  )
   ^$editor $projects_path
 }
 alias pre-commit = uvx prek
