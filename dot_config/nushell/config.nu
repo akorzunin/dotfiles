@@ -73,6 +73,16 @@ def я [] {
 alias sv = sudo v2raya
 alias ts = timeshift-launcher
 alias record-selection = zsh -c 'wf-recorder -g "$(slurp)" -f a.mp4'
+# TODO: make code less cringe
+def screenshot [
+  --delay (-d)
+] {
+  if ($delay) {
+    zsh -c 'grim -g "$(slurp -d; sleep 10; notify-send Screenshot-saved)" - | wl-copy'
+  } else {
+    zsh -c 'grim -g "$(slurp -d; hyprctl dispatch movecursortocorner 1 > /dev/null)" - | wl-copy'
+  }
+}
 alias gp = git pull
 alias gpr = git pull --rebase
 alias gf = git fetch
