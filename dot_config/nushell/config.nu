@@ -37,6 +37,8 @@ $env.SYSTEMD_PAGER = $env.PAGER
 $env.SYSTEMD_LESS = $env.LESS
 $env.PATH = ($env.PATH | append '~/.local/bin')
 $env.PATH = ($env.PATH | append '~/.npm-global/bin')
+$env.PATH = ($env.PATH | append '~/go/bin')
+$env.PATH = ($env.PATH | append '~/.local/share/pnpm')
 # oh-my-posh init nu
 oh-my-posh init nu --config ~/.config/oh-my-posh/base.yaml
 source ~/.zoxide.nu
@@ -60,6 +62,7 @@ def lsblk [] {
     | bat -l conf
 }
 alias pf = sudo systemctl poweroff
+alias sus = systemctl suspend
 alias rb = reboot
 def я [] {
   print ((
