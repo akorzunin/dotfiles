@@ -209,3 +209,5 @@ def po [
   ^$editor $projects_path
 }
 alias pre-commit = uvx prek
+alias pd = pnpm dev
+alias pt = pnpm tsc
