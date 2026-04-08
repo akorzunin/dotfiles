@@ -11,7 +11,7 @@ alias he = hyprctl dispatch exit
 def hc [] {
   hyprctl clients -j |
   from json |
-  select class title xwayland size floating pseudo fullscreen fullscreenClient |
+  select pid class initialClass title initialTitle xwayland pinned size floating fullscreen fullscreenClient |
   to json |
   jq
 }
