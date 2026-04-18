@@ -206,7 +206,13 @@ def po [
       | first
       | path expand
   )
-  ^$editor $projects_path
+  if ($editor in ["code", "zeditor"]) {
+    ^$editor $projects_path
+    return
+  }
+  # for terminal editors
+  nu -e ($editor + " " + $projects_path + "; exit 0")
+  return
 }
 alias pre-commit = uvx prek
 alias pd = pnpm dev
