@@ -3,6 +3,7 @@ alias - = cd -
 alias l = lazygit
 alias n = nvim
 alias f = fzf
+alias y = yazi
 alias c = clear
 alias py = python
 alias p = python
@@ -61,7 +62,14 @@ def lsblk [] {
     ^lsblk -o NAME,FSTYPE,TYPE,SIZE,MOUNTPOINTS,UUID
     | bat -l conf
 }
-alias pf = sudo systemctl poweroff
+def pf [] {
+  let reply = (input --default "y" "Do you want to continue? (Y/n): ")
+  if $reply in ["yes" "Y" "y"] {
+      sudo systemctl poweroff
+  } else {
+      print "Aborted."
+  }
+}
 alias sus = systemctl suspend
 alias rb = reboot
 def я [] {
