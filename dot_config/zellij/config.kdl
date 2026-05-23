@@ -8,3 +8,7 @@ keybinds {
         unbind "Alt k"
     }
 }
+options {
+    welcome_screen false
+    show_startup_tips true
+}
