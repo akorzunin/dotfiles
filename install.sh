@@ -6,6 +6,7 @@ sync.py link .config/lazygit/config.yml
 sync.py link .config/oh-my-posh/base.yaml
 sync.py link .local/bin/ssh-sel.nu
 sync.py link .local/bin/tiktok.nu
+sync.py link .config/opencode/opencode.jsonc
 
 cp -r ~/Documents/dotfiles/dot_config/zellij ~/.config/
 

@@ -1,0 +1,28 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+  "plugin": ["@mohak34/opencode-notifier@v0.2.5"],
+  "command": {
+    "commit": {
+      "description": "Review staged changes, create commit message, ask for confirmation before committing",
+      "agent": "build",
+      "template": "Review the staged changes and create a suitable commit message. Follow these steps:\n\n1. First, examine the git status to see what's staged:\n!git status`\n\n2. Review the staged changes in detail:\n!`git diff --staged`\n\n3. If necessary, examine specific changed files to understand the changes better. Use read tools for key files.\n\n4. Look at recent commit history for context:\n!`git log --oneline -5`\n\n5. Analyze the changes and create a one line commit message that follows conventional commit format. Focus on the 'why' rather than just the 'what'.\n\n6. Write proposed commit message to the user and its clipboard \n!`echo 'proposed message' | wl-copy and ask for confirmation before committing.\n\n",
+    },
+  },
+  "permission": {
+    "websearch": "allow",
+    "bash": {
+      "git commit*": "ask",
+      "git add*": "ask",
+      "git push*": "ask",
+      "git pull*": "ask",
+      "git merge*": "ask",
+      "git rebase*": "ask",
+      "git reset*": "ask",
+      "git checkout*": "ask",
+      "git status": "allow",
+      "git log": "allow",
+      "git diff": "allow",
+      "git branch": "allow",
+    },
+  },
+}
