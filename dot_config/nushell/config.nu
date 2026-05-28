@@ -190,7 +190,7 @@ def po [
   --projectsdir (-p): path = "~/Documents"
 ] {
   let projects_dir = ($projectsdir | path expand)
-  let selected_project = ($projects_dir + "/" + (
+  let selected_project = (
       ls $projects_dir
       | each {|e|
         let git_date = do --ignore-errors {
@@ -202,23 +202,24 @@ def po [
         }
       }
       | sort-by last_git_commit_date -r
-      | select name last_git_commit_date
       | update name {$in | split column '/' | get ($in | columns | last) | last }
       | update last_git_commit_date {$in | date humanize }
-      | to csv -n -s '|'
-      | ^column -s '|' -t -o ' | '
-      | fzf
-    )
+      | each { |row| $"($row.name)\t($row.last_git_commit_date)" }
+      | to text
+      | fzf --delimiter '\t' --with-nth 1
+      | str trim
   )
-  let projects_path = (
-    $selected_project
-      | split column ' | '
-      | get ($in | columns |first)
-      | first
-      | path expand
-  )
+  if ($selected_project | is-empty) {
+    return
+  }
+  let project_name = ($selected_project | split row "\t" | get 0)
+  let projects_path = ($projects_dir | path join $project_name | path expand)
   if ($editor in ["code", "zeditor"]) {
     ^$editor $projects_path
+    return
+  }
+  if ($editor == "kitty") {
+    ^kitty --detach $projects_path
     return
   }
   # for terminal editors
