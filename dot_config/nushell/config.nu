@@ -8,6 +8,8 @@ alias c = clear
 alias py = python
 alias p = python
 alias h = htop
+alias o = opencode
+alias oh = http_proxy=localhost:12334 https_proxy=localhost:12334 opencode
 alias he = hyprctl dispatch exit
 def hc [] {
   hyprctl clients -j |
@@ -97,6 +99,7 @@ def screenshot [
 alias gp = git pull
 alias gpr = git pull --rebase
 alias gf = git fetch
+alias gl = git log --oneline --graph --all --decorate --color
 alias upd = sudo pacman -Syyu
 alias task = go-task
 let ru_en_mapping = {
