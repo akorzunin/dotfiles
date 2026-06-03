@@ -4,12 +4,12 @@ alias l = lazygit
 alias n = nvim
 alias f = fzf
 alias y = yazi
-alias c = clear
+def c [] { clear; reset }
 alias py = python
 alias p = python
 alias h = htop
 alias o = opencode
-alias oh = http_proxy=localhost:12334 https_proxy=localhost:12334 opencode
+alias oh = with-env { http_proxy: "localhost:12334" https_proxy: "localhost:12334" } { opencode }
 alias he = hyprctl dispatch exit
 def hc [] {
   hyprctl clients -j |
@@ -54,6 +54,7 @@ alias nhr = nvim ~/.config/hypr/windowrules.conf
 alias nhw = nvim ~/.config/hypr/windowrules.conf
 alias nhs = nvim ~/.config/hypr/startup.conf
 alias nhb = nvim ~/.config/hypr/binds.conf
+alias nn = nvim ~/.config/niri/config.kdl
 
 alias nc = config nu
 
@@ -227,5 +228,8 @@ def po [
   return
 }
 alias pre-commit = uvx prek
+alias pi = uvx prek install
+alias pu = uvx prek uninstall
+alias pa = uvx prek run --all-files
 alias pd = pnpm dev
 alias pt = pnpm tsc
