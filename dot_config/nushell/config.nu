@@ -233,3 +233,5 @@ alias pu = uvx prek uninstall
 alias pa = uvx prek run --all-files
 alias pd = pnpm dev
 alias pt = pnpm tsc
+alias logs = journalctl -xb --reverse
+
