@@ -120,8 +120,23 @@ $env.config = (
     | upsert hooks.pre_execution [ {||
         $env.repl_commandline = (commandline)
         if ($env.repl_commandline =~ '^\P{ascii}') {
-          print "Swapping layout: " -n
-          hyprctl switchxkblayout all 0
+          let wm = if ('NIRI_SOCKET' in $env) {
+            'niri'
+          } else if ('HYPRLAND_INSTANCE_SIGNATURE' in $env) {
+            'hyprland'
+          } else {
+            'unknown'
+          }
+          if $wm == 'unknown' {
+            print "Error: unsupported or undetected window manager"
+            return
+          }
+          print $"Swapping layout for ($wm): " -n
+          if $wm == 'niri' {
+            niri msg action switch-layout 0
+          } else {
+            hyprctl switchxkblayout all 0
+          }
           let fixed_cmd = ($env.repl_commandline
             | split chars
             | each {|c|
