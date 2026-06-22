@@ -243,7 +243,7 @@ def po [
   return
 }
 alias pre-commit = uvx prek
-alias pi = uvx prek install
+# alias pi = uvx prek install
 alias pu = uvx prek uninstall
 alias pa = uvx prek run --all-files
 alias pd = pnpm dev
@@ -256,5 +256,8 @@ $env.config.history = {
     isolation: true
 }
 def nt [msg: string = 'Done!'] {
-    notify-send $msg --urgency=critical --expire-time=100000
+    notify-send $msg
+}
+def nt-hist [] {
+    dunstctl history | from json | get data | select message.data | get 'message.data' | first | each {|e| $e | str replace -a -r '<.+?>' ""} | reverse
 }
