@@ -268,3 +268,9 @@ def type [q: string, --all(-a)] {
     }
     which $q | to yaml | bat -l yaml
 }
+
+# on init run
+# mkdir $"($nu.cache-dir)"; carapace _carapace nushell | save --force $"($nu.cache-dir)/carapace.nu"
+$env.CARAPACE_BRIDGES = 'zsh,fish,bash,inshellisense' # optional
+source $"($nu.cache-dir)/carapace.nu"
+
