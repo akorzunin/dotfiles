@@ -1,4 +1,6 @@
-alias ll = ls -as
+def ll [] {
+  ls --long | select name type size modified mode user group
+}
 alias - = cd -
 alias l = lazygit
 alias n = nvim
