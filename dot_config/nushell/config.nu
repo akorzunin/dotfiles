@@ -276,3 +276,16 @@ def type [q: string, --all(-a)] {
 $env.CARAPACE_BRIDGES = 'zsh,fish,bash,inshellisense' # optional
 source $"($nu.cache-dir)/carapace.nu"
 
+# run gui app from terminal and then close it
+def --wrapped gui [...cmd: string] {
+  if ($cmd | is-empty) {
+    error make { msg: "Usage: gui <command> [args...]" }
+  }
+  ^sh -c 'nohup setsid "$@" >/dev/null 2>&1 &' sh ...$cmd
+  sleep 100ms
+  if ("KITTY_WINDOW_ID" in $env) {
+    ^kitty @ close-window --self
+  } else {
+    exit
+  }
+}
