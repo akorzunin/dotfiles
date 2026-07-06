@@ -1,5 +1,5 @@
-def ll [] {
-  ls --long | select name type size modified mode user group
+def ll [a: path = "."] {
+  ls --long $a | select name type size modified mode user group
 }
 alias - = cd -
 alias l = lazygit
@@ -288,4 +288,13 @@ def --wrapped gui [...cmd: string] {
   } else {
     exit
   }
+}
+def --wrapped hpi [...args: string] {
+  http_proxy="localhost:12334" https_proxy="localhost:12334" pi ...$args
+}
+def --wrapped hdiscord [...args: string] {
+  http_proxy="localhost:12334" https_proxy="localhost:12334" gui vesktop ...$args
+}
+def --wrapped hspotify [...args: string] {
+  http_proxy="localhost:12334" https_proxy="localhost:12334" gui spotify-launcher ...$args
 }
