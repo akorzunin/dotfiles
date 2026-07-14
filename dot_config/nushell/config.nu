@@ -245,7 +245,7 @@ def po [
   return
 }
 alias pre-commit = uvx prek
-# alias pi = uvx prek install
+alias pin = uvx prek install
 alias pu = uvx prek uninstall
 alias pa = uvx prek run --all-files
 alias pd = pnpm dev
