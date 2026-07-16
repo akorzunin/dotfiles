@@ -77,15 +77,6 @@ def pf [] {
 }
 alias sus = systemctl suspend
 alias rb = reboot
-def я [] {
-  print ((
-    [71 111 108 111 118 107 97 32 111 116 32 104 121 97]
-    | each { char --integer $in }
-    | str join
-  ))
-  hyprctl switchxkblayout all 0
-  __zoxide_z
-}
 alias sv = sudo v2raya
 alias ts = timeshift-launcher
 alias record-selection = zsh -c 'wf-recorder -g "$(slurp)" -f a.mp4'
@@ -297,4 +288,15 @@ def --wrapped hdiscord [...args: string] {
 }
 def --wrapped hspotify [...args: string] {
   http_proxy="localhost:12334" https_proxy="localhost:12334" gui spotify-launcher ...$args
+}
+def --env mkdir [...args: string] {
+ ^mkdir ...$args
+ let dirs = ($args | where {|a| not ($a | str starts-with "-") })
+ if $env.LAST_EXIT_CODE == 0 and not ($dirs | is-empty) {
+   load-env { _: (($dirs | last) | path expand) }
+ }
+}
+def --env mkcd [...dirs: path] {
+ mkdir ...$dirs
+ cd ($dirs | last)
 }
