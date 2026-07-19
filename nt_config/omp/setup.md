@@ -1,5 +1,5 @@
 ## nushell
-open 
+open
 ```
 $nu.config-path
 ```
