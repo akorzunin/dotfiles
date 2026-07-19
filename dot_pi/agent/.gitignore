@@ -1,0 +1,7 @@
+*.json
+.cache/
+tmp/
+graveyard/
+sessions/
+bin/
+intercom/

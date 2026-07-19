@@ -35,7 +35,7 @@
   "native": {
     "enabled": true,
     "suppressWhenFocused": false,
-    "soundPath": "/home/korzuninav/.unipi/config/notify/complete.wav"
+    "soundPath": "~/.unipi/config/notify/complete.wav"
   },
   "gotify": {
     "enabled": false,
