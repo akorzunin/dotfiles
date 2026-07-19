@@ -1,0 +1,56 @@
+{
+  "defaultPlatforms": [
+    "native"
+  ],
+  "events": {
+    "workflow_end": {
+      "enabled": true,
+      "platforms": []
+    },
+    "ralph_loop_end": {
+      "enabled": true,
+      "platforms": []
+    },
+    "mcp_server_error": {
+      "enabled": true,
+      "platforms": []
+    },
+    "agent_end": {
+      "enabled": true,
+      "platforms": []
+    },
+    "memory_consolidated": {
+      "enabled": false,
+      "platforms": []
+    },
+    "session_shutdown": {
+      "enabled": false,
+      "platforms": []
+    },
+    "ask_user_prompt": {
+      "enabled": false,
+      "platforms": []
+    }
+  },
+  "native": {
+    "enabled": true,
+    "suppressWhenFocused": false,
+    "soundPath": "/home/korzuninav/.unipi/config/notify/complete.wav"
+  },
+  "gotify": {
+    "enabled": false,
+    "priority": 5
+  },
+  "telegram": {
+    "enabled": false
+  },
+  "ntfy": {
+    "enabled": false,
+    "serverUrl": "https://ntfy.sh",
+    "priority": 3
+  },
+  "recap": {
+    "enabled": false,
+    "model": "openrouter/openai/gpt-oss-20b"
+  }
+}
