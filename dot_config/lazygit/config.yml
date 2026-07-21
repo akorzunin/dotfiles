@@ -5,5 +5,7 @@ gui:
     optionsTextColor:
       - cyan
 promptToReturnFromSubprocess: false
+os:
+  open: 'kitty --detach nvim "{{filename}}"'
 git:
   overrideGpg: true
