@@ -5,6 +5,7 @@ sync.py link .config/nushell/config.nu
 sync.py link .config/lazygit/config.yml
 sync.py link .config/oh-my-posh/base.yaml
 sync.py link .local/bin/ssh-sel.nu
+sync.py link .local/bin/dropbox-sync
 sync.py link .local/bin/tiktok.nu
 sync.py link .config/opencode/opencode.jsonc
 

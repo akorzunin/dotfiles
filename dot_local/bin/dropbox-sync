@@ -1,0 +1,163 @@
+#!/usr/bin/env nu
+
+let POLL_INTERVAL = "1h"
+
+# rclone's --daemon and remote control cannot share a socket, so the mount is
+# detached with nohup instead.
+def paths [] {
+  let runtime = ($env.XDG_RUNTIME_DIR? | default (($env.TMPDIR? | default /tmp) | path join $"rclone-(id -u | str trim)"))
+  {
+    dir: ($env.HOME | path join Dropbox)
+    runtime: $runtime
+    socket: ($runtime | path join dropbox.sock)
+    log: (($env.XDG_STATE_HOME? | default ($env.HOME | path join .local state)) | path join rclone dropbox.log)
+  }
+}
+
+def dropbox-remote [] {
+  let result = (^rclone listremotes --type dropbox --exact | complete)
+  if $result.exit_code != 0 {
+    error make {msg: ($result.stderr | str trim)}
+  }
+
+  let remotes = ($result.stdout | lines)
+  if ($remotes | is-empty) {
+    error make {msg: "No Dropbox remote configured. Run: dropbox-sync --setup"}
+  }
+  if "dropbox:" in $remotes {
+    return "dropbox:"
+  }
+  if ($remotes | length) == 1 {
+    return ($remotes | first)
+  }
+  error make {msg: $"Multiple Dropbox remotes found: ($remotes | str join ', ')"}
+}
+
+def is-mounted [dir: path] {
+  (^mountpoint -q $dir | complete).exit_code == 0
+}
+
+def require-mount [] {
+  let p = (paths)
+  if not (is-mounted $p.dir) {
+    error make {msg: "Dropbox is not mounted. Run: dropbox-sync"}
+  }
+  if not ($p.socket | path exists) {
+    error make {msg: "Dropbox was mounted outside this script; remount it with dropbox-sync."}
+  }
+  $p
+}
+
+def rc [socket: path, command: string, ...args: string] {
+  let result = (^rclone rc --unix-socket $socket $command ...$args | complete)
+  if $result.exit_code != 0 {
+    error make {msg: ($result.stderr | str trim)}
+  }
+  $result.stdout | from json
+}
+
+def setup [] {
+  print 'Create a Dropbox remote; any name is fine.'
+  ^rclone config
+  if $env.LAST_EXIT_CODE != 0 {
+    error make {msg: "rclone configuration failed"}
+  }
+  print $"Configured (dropbox-remote)"
+}
+
+def mount-dropbox [] {
+  let p = (paths)
+  let remote = (dropbox-remote)
+  if (is-mounted $p.dir) {
+    print $"Dropbox is already mounted at ($p.dir)"
+    return
+  }
+
+  mkdir $p.dir $p.runtime ($p.log | path dirname)
+  if not (ls -a $p.dir | is-empty) {
+    print --stderr "Warning: existing local files will be hidden while Dropbox is mounted; they are not uploaded."
+  }
+  chmod 700 $p.runtime
+  rm -f $p.socket
+  let pid = (
+    ^sh -c 'log=$1; shift; nohup "$@" >"$log" 2>&1 </dev/null & echo $!'
+      sh $p.log rclone mount $remote $p.dir
+      --vfs-cache-mode writes
+      --poll-interval $POLL_INTERVAL
+      --rc
+      --rc-addr $"unix://($p.socket)"
+      --rc-no-auth
+      --allow-non-empty
+    | into int
+  )
+
+  for _ in 1..100 {
+    if (is-mounted $p.dir) and ($p.socket | path exists) {
+      print $"Dropbox mounted at ($p.dir) using ($remote)"
+      return
+    }
+    if (^kill -0 $pid | complete).exit_code != 0 {
+      open --raw $p.log | lines | last 20 | str join (char newline) | print --stderr
+      error make {msg: "Dropbox mount failed"}
+    }
+    sleep 100ms
+  }
+
+  do --ignore-errors { ^kill $pid }
+  error make {msg: $"Dropbox mount timed out. See ($p.log)"}
+}
+
+def check-sync [] {
+  let p = (require-mount)
+  let remote = (dropbox-remote)
+  let vfs = (rc $p.socket vfs/stats)
+  let stats = (rc $p.socket core/stats short=true)
+  let queued = ($vfs | get -o diskCache.uploadsQueued | default 0)
+  let uploading = ($vfs | get -o diskCache.uploadsInProgress | default 0)
+  let errors = (($vfs | get -o diskCache.erroredFiles | default 0) + ($stats | get -o errors | default 0))
+  let out_of_space = ($vfs | get -o diskCache.outOfSpace | default false)
+
+  print $"Mount:   OK \(($p.dir)\)"
+  let remote_check = (^rclone lsf $remote --max-depth 1 | complete)
+  if $remote_check.exit_code != 0 {
+    print "Remote:  ERROR"
+    print --stderr ($remote_check.stderr | str trim)
+    exit 1
+  }
+  print "Remote:  OK"
+  print $"Uploads: ($queued) queued, ($uploading) active"
+  print $"Errors:  ($errors)"
+
+  if $errors != 0 or $out_of_space {
+    if $out_of_space { print "Cache:   OUT OF SPACE" }
+    let last_error = ($stats | get -o lastError | default "")
+    if not ($last_error | is-empty) { print $"Last:    ($last_error)" }
+    exit 1
+  }
+  print "Sync:    OK"
+}
+
+def force-sync [] {
+  let p = (require-mount)
+  let items = (rc $p.socket vfs/queue | get -o queue | default [])
+  for item in $items {
+    rc $p.socket vfs/queue-set-expiry $"id=($item.id)" expiry=-1000000000 | ignore
+  }
+  rc $p.socket vfs/refresh recursive=true | ignore
+  print $"Prioritized ($items | length) queued upload\(s\) and refreshed Dropbox."
+}
+
+def main [
+  --setup (-s)  # Open rclone's interactive configuration
+  --force (-f)  # Upload queued local changes now and refresh the mount
+  --check (-c)  # Show mount, connection, upload, and error status
+] {
+  if (which rclone | is-empty) {
+    error make {msg: "rclone is not installed"}
+  }
+  if ([$setup $force $check] | where {$in} | length) > 1 {
+    error make {msg: "Choose only one option"}
+  }
+
+  if $setup { setup } else if $force { force-sync } else if $check { check-sync } else { mount-dropbox }
+}
