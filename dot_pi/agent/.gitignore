@@ -1,4 +1,5 @@
 *.json
+*.jsonl
 .cache/
 tmp/
 graveyard/
