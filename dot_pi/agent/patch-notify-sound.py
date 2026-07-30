@@ -97,6 +97,17 @@ patch("events.ts", [
       });'''),
 ])
 
+patch("commands.ts", [
+    ("soundPath: config.native.soundPath", '''            await sendNativeNotification(title, message, {
+              windowsAppId: config.native.windowsAppId,
+              suppressWhenFocused: config.native.suppressWhenFocused,
+            });''', '''            await sendNativeNotification(title, message, {
+              soundPath: config.native.soundPath,
+              windowsAppId: config.native.windowsAppId,
+              suppressWhenFocused: config.native.suppressWhenFocused,
+            });'''),
+])
+
 patch("tui/settings-overlay.ts", [
     ("native, gotify, telegram, ntfy + sound + suppress", '''    if (this.section === "platforms") return 5; // native, gotify, telegram, ntfy + suppress option''', '''    if (this.section === "platforms") return 6; // native, gotify, telegram, ntfy + sound + suppress option'''),
     ("// sound toggle", '''      } else {
