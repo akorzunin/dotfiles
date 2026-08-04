@@ -1,11 +1,8 @@
 ---
-name: commit
-description: Generate a one-line Conventional Commit message from git changes, then on the next user confirmation run git commit. Use for /commit or when the user asks to commit changes.
+description: Generate and commit changes with a Conventional Commit message
 model: omniroute/oc/deepseek-v4-flash-free
+restore: true
 ---
-
-# Commit
-
 ## Turn 1: generate and commit in one turn
 
 1. Run `git rev-parse --show-toplevel` and work from that repo root.
@@ -28,3 +25,4 @@ Message rules:
 - Prefer the main user-facing change over mechanical details.
 - `git add -A && git commit -m "<message>"`.
 - Otherwise run `git commit -m "<message>"`.
+
