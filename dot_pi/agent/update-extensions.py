@@ -7,7 +7,7 @@ from pathlib import Path
 file = Path(__file__).with_name("install.sh")
 text = file.read_text()
 rx = re.compile(
-    r"pi install npm:(?P<pkg>@[^/\s]+/[^\s@]+|[^@\s]+)@(?P<ver>\d+\.\d+\.\d+)"
+    r"ensure_npm (?P<pkg>@[^/\s]+/[^\s@]+|[^@\s]+) (?P<ver>\d+\.\d+\.\d+)"
 )
 
 updates = []
@@ -32,7 +32,21 @@ if "--apply" not in sys.argv:
 
 for package, current, latest in updates:
     subprocess.run(["pi", "install", f"npm:{package}@{latest}"], check=True)
-    text = text.replace(f"npm:{package}@{current}", f"npm:{package}@{latest}")
+    subprocess.run(
+        [
+            "npm",
+            "install",
+            "--save-exact",
+            "--prefix",
+            str(Path.home() / ".pi/agent/npm"),
+            f"{package}@{latest}",
+            "--legacy-peer-deps",
+        ],
+        check=True,
+    )
+    text = text.replace(
+        f"ensure_npm {package} {current}", f"ensure_npm {package} {latest}"
+    )
 
 file.write_text(text)
 print(f"Updated {file}")

@@ -287,7 +287,7 @@ def --wrapped hdiscord [...args: string] {
   http_proxy="localhost:12334" https_proxy="localhost:12334" gui vesktop ...$args
 }
 def --wrapped hspotify [...args: string] {
-  http_proxy="localhost:12334" https_proxy="localhost:12334" gui spotify-launcher ...$args
+  http_proxy="localhost:12334" https_proxy="localhost:12334" DISPLAY="" gui spotify-launcher ...$args
 }
 def --env mkdir [...args: string] {
  ^mkdir ...$args

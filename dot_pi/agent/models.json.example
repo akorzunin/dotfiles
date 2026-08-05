@@ -1,0 +1,19 @@
+{
+  "providers": {
+    "omniroute": {
+      "baseUrl": "https://omniroute.akorz.duckdns.org/v1",
+      "api": "openai-completions",
+      "apiKey": "$OMNIROUTE_API_KEY",
+      "models": [
+        {
+          "id": "auto/coding",
+          "name": "OmniRoute Auto Coding"
+        },
+        {
+          "id": "oc/deepseek-v4-flash-free",
+          "name": "DeepSeek V4 Flash Free"
+        }
+      ]
+    }
+  }
+}
