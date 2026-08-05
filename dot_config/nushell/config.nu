@@ -264,8 +264,8 @@ def type [q: string, --all(-a)] {
 
 # on init run
 # mkdir $"($nu.cache-dir)"; carapace _carapace nushell | save --force $"($nu.cache-dir)/carapace.nu"
-$env.CARAPACE_BRIDGES = 'zsh,fish,bash,inshellisense' # optional
-source $"($nu.cache-dir)/carapace.nu"
+# $env.CARAPACE_BRIDGES = 'zsh,fish,bash,inshellisense' # optional
+# source $"($nu.cache-dir)/carapace.nu"
 
 # run gui app from terminal and then close it
 def --wrapped gui [...cmd: string] {
