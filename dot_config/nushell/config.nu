@@ -3,6 +3,7 @@ def ll [a: path = "."] {
 }
 alias - = cd -
 alias l = lazygit
+alias ld = lazydocker
 alias n = nvim
 alias f = fzf
 alias y = yazi

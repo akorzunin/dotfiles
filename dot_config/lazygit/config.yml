@@ -9,3 +9,8 @@ os:
   open: 'kitty --detach nvim "{{filename}}"'
 git:
   overrideGpg: true
+customCommands:
+  - key: 'F'
+    command: 'git pull --rebase --autostash origin {{.SelectedLocalBranch.Name}}'
+    context: 'localBranches'
+    output: log
