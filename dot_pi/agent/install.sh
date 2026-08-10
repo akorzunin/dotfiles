@@ -17,13 +17,14 @@ ensure_git() {
   fi
 }
 
-ensure_npm pi-subagents 0.40.0
+ensure_git git:github.com/DietrichGebert/ponytail@14a0d79548d4de8fc2de95c1b94bb0de63a739d3 14a0d79548d4de8fc2de95c1b94bb0de63a739d3
 ensure_npm pi-web-access 0.18.0
 ensure_npm @juicesharp/rpiv-ask-user-question 2.4.0
 ensure_npm @pi-unipi/notify 2.2.1
-ensure_npm pi-intercom 0.9.2
 ensure_npm pi-prompt-template-model 0.10.0
 ensure_npm pi-codex-limit 1.8.2
-ensure_git git:github.com/DietrichGebert/ponytail@14a0d79548d4de8fc2de95c1b94bb0de63a739d3 14a0d79548d4de8fc2de95c1b94bb0de63a739d3
+# ensure_npm pi-subagents 0.40.0
+# ensure_npm pi-intercom 0.9.2
+# ensure_npm npm:pi-mono-figma
 
 echo 'Pi setup restored. Run `pi` then `/login` on a new machine.'

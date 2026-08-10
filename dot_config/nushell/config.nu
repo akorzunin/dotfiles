@@ -282,7 +282,7 @@ def --wrapped gui [...cmd: string] {
   }
 }
 def --wrapped hpi [...args: string] {
-  http_proxy="localhost:12334" https_proxy="localhost:12334" pi ...$args
+  http_proxy="http://localhost:12334" https_proxy="http://localhost:12334" pi ...$args
 }
 def --wrapped hdiscord [...args: string] {
   http_proxy="localhost:12334" https_proxy="localhost:12334" gui vesktop ...$args
