@@ -144,10 +144,16 @@ $env.config = (
     } ]
 )
 
-def desktop-sync [] {
-  def check_repo [repo_path: path, name: string] {
+def desktop-sync [
+  --pull (-p)
+] {
+  def check_repo [repo_path: path, name: string, pull: bool] {
     print -n $"(ansi green)($name) config:(ansi reset)"
-    git -C $repo_path fetch | ignore
+    if $pull {
+      git -C $repo_path pull --rebase --autostash | ignore
+    } else {
+      git -C $repo_path fetch | ignore
+    }
     print -n $" (git -C $repo_path rev-parse --abbrev-ref HEAD) "
     print -n $"(git -C $repo_path status --porcelain=v2 -b |
       find branch.ab | parse '{a} {branch} {ab}' | get ab | to text
@@ -155,9 +161,9 @@ def desktop-sync [] {
     git -C $repo_path status -s
     print ""
   }
-  check_repo ~/.config/nvim/ "Neovim"
-  check_repo ~/Documents/hyprconf/ "Hyprland"
-  check_repo ~/Documents/dotfiles/ "Dotfiles"
+  check_repo ~/.config/nvim/ "Neovim" $pull
+  check_repo ~/Documents/hyprconf/ "Hyprland" $pull
+  check_repo ~/Documents/dotfiles/ "Dotfiles" $pull
 }
 
 def ff-compress [file: path, out?: string, --crf (-c): int = 23] {
