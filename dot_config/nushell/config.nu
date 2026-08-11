@@ -289,6 +289,12 @@ def with-proxy [cmd: closure, proxy: string = "http://localhost:12334"] {
 def --wrapped hpi [...args: string] {
   with-proxy { pi ...$args }
 }
+def --wrapped hpie [...args: string] {
+  with-proxy { pi-mode --edit ...$args }
+}
+def --wrapped hpis [...args: string] {
+  with-proxy { pi-mode --subagent ...$args }
+}
 def --wrapped hdiscord [...args: string] {
   with-proxy { gui vesktop --enable-features=UseOzonePlatform --ozone-platform=x11 ...$args }
 }

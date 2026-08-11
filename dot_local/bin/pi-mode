@@ -1,0 +1,39 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+script_dir=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
+mode=default
+
+case "${1:-}" in
+  --default)
+    mode=default
+    shift
+    ;;
+  --edit)
+    mode=edit
+    shift
+    ;;
+  --subagent)
+    mode=subagent
+    shift
+    ;;
+esac
+
+# pi-subagents invokes this script directly for children, without mode flags.
+if [[ -n "${PI_SUBAGENT_CHILD:-}" ]]; then
+  mode=edit
+fi
+
+args=()
+if [[ "$mode" != default ]]; then
+  args+=(--system-prompt "")
+fi
+if [[ "$mode" == subagent ]]; then
+  export PI_SUBAGENT_PI_BINARY="${PI_SUBAGENT_PI_BINARY:-$script_dir/pi-mode}"
+  args+=(
+    -e npm:pi-subagents@0.40.0
+    -e npm:pi-intercom@0.9.2
+  )
+fi
+
+exec pi "${args[@]}" "$@"
