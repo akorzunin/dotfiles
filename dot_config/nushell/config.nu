@@ -265,8 +265,10 @@ def type [q: string, --all(-a)] {
 
 # on init run
 # mkdir $"($nu.cache-dir)"; carapace _carapace nushell | save --force $"($nu.cache-dir)/carapace.nu"
-# $env.CARAPACE_BRIDGES = 'zsh,fish,bash,inshellisense' # optional
-# source $"($nu.cache-dir)/carapace.nu"
+def enable-carapace [] {
+  $env.CARAPACE_BRIDGES = 'zsh,fish,bash,inshellisense' # optional
+  source $"($nu.cache-dir)/carapace.nu"
+}
 
 # run gui app from terminal and then close it
 def --wrapped gui [...cmd: string] {
@@ -281,23 +283,29 @@ def --wrapped gui [...cmd: string] {
     exit
   }
 }
+def with-proxy [cmd: closure, proxy: string = "http://localhost:12334"] {
+  with-env { http_proxy: $proxy, https_proxy: $proxy } $cmd
+}
 def --wrapped hpi [...args: string] {
-  http_proxy="http://localhost:12334" https_proxy="http://localhost:12334" pi ...$args
+  with-proxy { pi ...$args }
 }
 def --wrapped hdiscord [...args: string] {
-  http_proxy="localhost:12334" https_proxy="localhost:12334" gui vesktop ...$args
+  with-proxy { gui vesktop --enable-features=UseOzonePlatform --ozone-platform=x11 ...$args }
+}
+def --wrapped htg [...args: string] {
+  with-proxy { gui Telegram ...$args }
 }
 def --wrapped hspotify [...args: string] {
-  http_proxy="localhost:12334" https_proxy="localhost:12334" DISPLAY="" gui spotify-launcher ...$args
+  with-proxy { DISPLAY="" gui spotify-launcher ...$args }
 }
 def --env mkdir [...args: string] {
- ^mkdir ...$args
- let dirs = ($args | where {|a| not ($a | str starts-with "-") })
- if $env.LAST_EXIT_CODE == 0 and not ($dirs | is-empty) {
-   load-env { _: (($dirs | last) | path expand) }
- }
+  ^mkdir ...$args
+  let dirs = ($args | where {|a| not ($a | str starts-with "-") })
+  if $env.LAST_EXIT_CODE == 0 and not ($dirs | is-empty) {
+    load-env { _: (($dirs | last) | path expand) }
+  }
 }
 def --env mkcd [...dirs: path] {
- mkdir ...$dirs
- cd ($dirs | last)
+  mkdir ...$dirs
+  cd ($dirs | last)
 }
