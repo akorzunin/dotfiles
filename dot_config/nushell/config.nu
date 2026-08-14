@@ -293,7 +293,7 @@ def with-proxy [cmd: closure, proxy: string = "http://localhost:12334"] {
   with-env { http_proxy: $proxy, https_proxy: $proxy } $cmd
 }
 def --wrapped hpi [...args: string] {
-  with-proxy { pi ...$args }
+  with-proxy { pi-mode --default ...$args }
 }
 def --wrapped hpie [...args: string] {
   with-proxy { pi-mode --edit ...$args }

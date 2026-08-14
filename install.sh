@@ -25,4 +25,3 @@ sync.py put ~/.config/Code/User/settings.json
 sync.py link .local/bin/pi-mode
 sync.py link .pi/agent
 sync.py link .unipi/config/notify
-bash ~/.pi/agent/install.sh
