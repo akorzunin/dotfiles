@@ -302,7 +302,7 @@ def --wrapped hpis [...args: string] {
   with-proxy { pi-mode --subagent ...$args }
 }
 def --wrapped hdiscord [...args: string] {
-  with-proxy { gui vesktop --enable-features=UseOzonePlatform --ozone-platform=x11 ...$args }
+  with-proxy { gui vesktop ...$args }
 }
 def --wrapped htg [...args: string] {
   with-proxy { gui Telegram ...$args }
