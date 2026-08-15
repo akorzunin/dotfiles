@@ -2,17 +2,17 @@
 
 let always_extensions = [
     ($nu.home-dir | path join ".pi/agent/extensions/notify-sound.ts")
-    "npm:pi-web-access@0.18.0"
-    "npm:@juicesharp/rpiv-ask-user-question@2.4.0"
-    "npm:@pi-unipi/notify@2.2.1"
-    "npm:pi-prompt-template-model@0.10.0"
-    "npm:pi-codex-limit@1.8.2"
+    "npm:pi-web-access@^0.18.0"
+    "npm:@juicesharp/rpiv-ask-user-question@^2.4.0"
+    "npm:@pi-unipi/notify@^2.2.1"
+    "npm:pi-prompt-template-model@^0.10.0"
+    "npm:pi-codex-limit@^1.8.2"
     "git:github.com/DietrichGebert/ponytail@14a0d79548d4de8fc2de95c1b94bb0de63a739d3"
 ]
 
 let subagent_extensions = [
-    "npm:pi-subagents@0.40.0"
-    "npm:pi-intercom@0.9.2"
+    "npm:pi-subagents@^0.40.0"
+    "npm:pi-intercom@^0.9.2"
     "npm:pi-mono-figma"
 ]
 
@@ -33,12 +33,16 @@ def --wrapped main [
         "default"
     }
 
-    let extensions = if $mode == "subagent" {
+    let no_extensions = ($args | any {|arg| $arg == "--no-extensions" or $arg == "-ne" })
+    let extensions = if $no_extensions {
+        []
+    } else if $mode == "subagent" {
         $always_extensions ++ $subagent_extensions
     } else {
         $always_extensions
     }
     let extension_args = ($extensions | each {|extension| [-e $extension] } | flatten)
+    let extension_discovery_args = if $no_extensions { [] } else { [--no-extensions] }
     let mode_args = if $mode == "default" {
         []
     } else {
@@ -52,5 +56,13 @@ def --wrapped main [
         )
     }
 
-    ^pi --no-extensions ...$extension_args ...$mode_args ...$args
+    let configured_agent_dir = ($env.PI_CODING_AGENT_DIR? | default "")
+    if $configured_agent_dir == "" {
+        $env.PI_CODING_AGENT_DIR = (
+            ^realpath ($nu.home-dir | path join ".pi/agent")
+            | str trim
+        )
+    }
+
+    ^pi ...$extension_discovery_args ...$extension_args ...$mode_args ...$args
 }
