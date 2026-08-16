@@ -15,7 +15,7 @@ def paths [] {
 }
 
 def dropbox-remote [] {
-  let result = (^rclone listremotes --type dropbox --exact | complete)
+  let result = (^rclone listremotes --type dropbox | complete)
   if $result.exit_code != 0 {
     error make {msg: ($result.stderr | str trim)}
   }
@@ -107,6 +107,48 @@ def mount-dropbox [] {
   error make {msg: $"Dropbox mount timed out. See ($p.log)"}
 }
 
+def tray [] {
+  mount-dropbox
+  ^python3 -c '
+import os
+import subprocess
+import gi
+
+gi.require_version("Gtk", "3.0")
+gi.require_version("AyatanaAppIndicator3", "0.1")
+from gi.repository import AyatanaAppIndicator3, GLib, Gtk
+
+mount = os.path.join(os.environ["HOME"], "Dropbox")
+indicator = AyatanaAppIndicator3.Indicator.new(
+    "dropbox-sync",
+    "network-server",
+    AyatanaAppIndicator3.IndicatorCategory.APPLICATION_STATUS,
+)
+indicator.set_status(AyatanaAppIndicator3.IndicatorStatus.ACTIVE)
+
+menu = Gtk.Menu()
+status = Gtk.MenuItem.new_with_label("Dropbox: checking...")
+status.set_sensitive(False)
+menu.append(status)
+quit_item = Gtk.MenuItem.new_with_label("Quit")
+quit_item.connect("activate", lambda *_: Gtk.main_quit())
+menu.append(quit_item)
+menu.show_all()
+indicator.set_menu(menu)
+
+def update():
+    mounted = subprocess.run(["mountpoint", "-q", mount]).returncode == 0
+    label = "Dropbox mounted" if mounted else "Dropbox not mounted"
+    indicator.set_icon_full("folder-remote" if mounted else "network-offline", label)
+    status.set_label(label)
+    return True
+
+update()
+GLib.timeout_add_seconds(5, update)
+Gtk.main()
+  '
+}
+
 def check-sync [] {
   let p = (require-mount)
   let remote = (dropbox-remote)
@@ -151,13 +193,17 @@ def main [
   --setup (-s)  # Open rclone's interactive configuration
   --force (-f)  # Upload queued local changes now and refresh the mount
   --check (-c)  # Show mount, connection, upload, and error status
+  --tray (-t)   # Mount Dropbox and show its status in the system tray
 ] {
   if (which rclone | is-empty) {
     error make {msg: "rclone is not installed"}
   }
-  if ([$setup $force $check] | where {$in} | length) > 1 {
+  if $tray and (which python3 | is-empty) {
+    error make {msg: "python3 is required for --tray"}
+  }
+  if ([$setup $force $check $tray] | where {$in} | length) > 1 {
     error make {msg: "Choose only one option"}
   }
 
-  if $setup { setup } else if $force { force-sync } else if $check { check-sync } else { mount-dropbox }
+  if $setup { setup } else if $force { force-sync } else if $check { check-sync } else if $tray { tray } else { mount-dropbox }
 }
