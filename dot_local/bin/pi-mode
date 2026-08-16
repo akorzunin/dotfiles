@@ -43,6 +43,8 @@ def --wrapped main [
     }
     let extension_args = ($extensions | each {|extension| [-e $extension] } | flatten)
     let extension_discovery_args = if $no_extensions { [] } else { [--no-extensions] }
+    let prompt_discovery_args = if $no_extensions { [] } else { [--no-prompt-templates] }
+    let skill_discovery_args = if $no_extensions { [] } else { [--no-skills] }
     let mode_args = if $mode == "default" {
         []
     } else {
@@ -64,5 +66,5 @@ def --wrapped main [
         )
     }
 
-    ^pi ...$extension_discovery_args ...$extension_args ...$mode_args ...$args
+    ^pi ...$extension_discovery_args ...$prompt_discovery_args ...$skill_discovery_args ...$extension_args ...$mode_args ...$args
 }
