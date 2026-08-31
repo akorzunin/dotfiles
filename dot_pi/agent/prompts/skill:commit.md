@@ -1,6 +1,6 @@
 ---
 description: Generate and commit changes with a Conventional Commit message
-model: omniroute/oc/deepseek-v4-flash-free
+model: openai-codex/gpt-5.6-luna
 restore: true
 ---
 ## Turn 1: generate and commit in one turn
@@ -13,8 +13,6 @@ restore: true
 
 ```text
 <type>(<scope>): <subject>
-
-Reply `commit` to run: git commit -m "<same message>"
 ```
 6. Commit without asking user to proceed
 
