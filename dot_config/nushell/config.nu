@@ -7,7 +7,7 @@ alias ld = lazydocker
 alias n = nvim
 alias f = fzf
 alias y = yazi
-def c [] { clear; reset }
+def cl [] { clear; reset }
 alias py = python
 alias p = python
 alias h = htop
@@ -269,12 +269,17 @@ def type [q: string, --all(-a)] {
     which $q | to yaml | bat -l yaml
 }
 
-# on init run
-# mkdir $"($nu.cache-dir)"; carapace _carapace nushell | save --force $"($nu.cache-dir)/carapace.nu"
-# def enable-carapace [] {
-#   $env.CARAPACE_BRIDGES = 'zsh,fish,bash,inshellisense' # optional
-#   source $"($nu.cache-dir)/carapace.nu"
-# }
+# Initialize carapace lazily with `c`.
+def --env enable-carapace [] {
+  $env.CARAPACE_BRIDGES = 'zsh,fish,bash,inshellisense'
+  let cache = $"($nu.cache-dir)/carapace.nu"
+  if not ($cache | path exists) {
+    mkdir $nu.cache-dir
+    carapace _carapace nushell | save --force $cache
+  }
+  source $"($nu.cache-dir)/carapace.nu"
+}
+alias c = enable-carapace
 
 # run gui app from terminal and then close it
 def --wrapped gui [...cmd: string] {
