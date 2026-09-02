@@ -8,6 +8,9 @@ promptToReturnFromSubprocess: false
 os:
   open: 'kitty --detach nvim "{{filename}}"'
 git:
+  pagers:
+    - pager: 'delta --dark --paging=never --line-numbers --hyperlinks --hyperlinks-file-link-format="lazygit-edit://{path}:{line}" --hunk-header-decoration-style=none'
+    - pager: 'delta --dark --paging=never --line-numbers --side-by-side --hyperlinks --hyperlinks-file-link-format="lazygit-edit://{path}:{line}"'
   overrideGpg: true
 customCommands:
   - key: 'F'
