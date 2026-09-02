@@ -17,3 +17,8 @@ customCommands:
     command: 'git pull --rebase --autostash origin {{.SelectedLocalBranch.Name}}'
     context: 'localBranches'
     output: log
+  - key: 'I'
+    context: 'files, commitFiles'
+    description: Preview image
+    command: 'kitten icat --hold {{.SelectedPath | quote}}'
+    output: terminal
