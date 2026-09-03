@@ -7,7 +7,6 @@ let always_extensions = [
     "npm:@pi-unipi/notify@^2.2.1"
     "npm:pi-prompt-template-model@^0.10.0"
     "npm:pi-codex-limit@^1.8.2"
-    "git:github.com/DietrichGebert/ponytail@14a0d79548d4de8fc2de95c1b94bb0de63a739d3"
 ]
 
 let subagent_extensions = [
