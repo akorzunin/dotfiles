@@ -200,6 +200,16 @@ def hs [
 }
 alias mpv = mpv --ao=pulse
 
+def vesktop-release-audio [] {
+  pactl --format=json list sink-inputs
+  | from json
+  | where {|stream| (($stream.properties | get -o "application.name") == "Chromium") and (($stream.properties | get -o "application.process.binary") == "electron") }
+  | get index
+  | each {|id| ^pactl kill-sink-input $id }
+  | ignore
+}
+alias vra = vesktop-release-audio
+
 # Open recent project
 def po [
   --editor (-e): string = "code"
