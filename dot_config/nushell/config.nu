@@ -325,7 +325,7 @@ def --wrapped hdiscord [...args: string] {
   with-proxy { gui vesktop ...$args }
 }
 def --wrapped htg [...args: string] {
-  with-proxy { gui Telegram ...$args }
+  with-proxy { QT_QPA_PLATFORMTHEME=xdgdesktopportal gui Telegram ...$args }
 }
 def --wrapped hspotify [...args: string] {
   with-proxy { DISPLAY="" gui spotify-launcher ...$args }
