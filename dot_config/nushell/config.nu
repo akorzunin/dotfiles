@@ -305,7 +305,11 @@ def --wrapped gui [...cmd: string] {
   }
 }
 def with-proxy [cmd: closure, proxy: string = "http://localhost:12334"] {
-  with-env { http_proxy: $proxy, https_proxy: $proxy } $cmd
+  with-env {
+    http_proxy: $proxy
+    https_proxy: $proxy
+    no_proxy: ($env.no_proxy? | default "localhost,127.0.0.1,::1")
+  } $cmd
 }
 def --wrapped hpi [...args: string] {
   with-proxy { pi-mode --default ...$args }
