@@ -320,6 +320,7 @@ def --wrapped hpie [...args: string] {
 def --wrapped hpis [...args: string] {
   with-proxy { pi-mode --subagent ...$args }
 }
+alias hpil = hpi '/codex-limit'
 def --wrapped hdiscord [...args: string] {
   with-proxy { gui vesktop ...$args }
 }
