@@ -1,0 +1,19 @@
+# Explicit colors keep the status bar readable regardless of Kitty's ANSI palette.
+[mode]
+normal_main = { fg = "#111827", bg = "#89b4fa", bold = true }
+normal_alt = { fg = "#89b4fa", bg = "#1e293b" }
+select_main = { fg = "#111827", bg = "#a6e3a1", bold = true }
+select_alt = { fg = "#a6e3a1", bg = "#1e293b" }
+unset_main = { fg = "#111827", bg = "#f38ba8", bold = true }
+unset_alt = { fg = "#f38ba8", bg = "#1e293b" }
+
+[status]
+overall = { fg = "#cdd6f4", bg = "#111827" }
+perm_sep = { fg = "#94a3b8" }
+perm_type = { fg = "#a6e3a1" }
+perm_read = { fg = "#f9e2af" }
+perm_write = { fg = "#f38ba8" }
+perm_exec = { fg = "#89dceb" }
+progress_label = { fg = "#cdd6f4", bold = true }
+progress_normal = { fg = "#a6e3a1", bg = "#1e293b" }
+progress_error = { fg = "#f9e2af", bg = "#7f1d1d" }

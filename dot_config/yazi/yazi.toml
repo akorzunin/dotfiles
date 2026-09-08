@@ -1,2 +1,5 @@
 [mgr]
 show_hidden = true
+# Parent / current directory / preview: 10% / 30% / 60%.
+ratio = [1, 2, 3]
+linemode = "size"

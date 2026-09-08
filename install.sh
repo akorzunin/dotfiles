@@ -1,6 +1,7 @@
 ./dot_local/bin/sync.py link .local/bin/sync.py
 zoxide init nushell | save -f ~/.zoxide.nu
 sync.py link .config/yazi/yazi.toml
+sync.py link .config/yazi/theme.toml
 sync.py link .config/nushell/config.nu
 sync.py link .config/lazygit/config.yml
 sync.py link .config/oh-my-posh/base.yaml
