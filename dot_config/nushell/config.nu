@@ -11,7 +11,39 @@ def cl [] { clear; reset }
 alias py = python
 alias p = python
 alias h = htop
-alias o = opencode
+# List processes by resident memory usage
+def memtop [count: int = 10] {
+  ps -l
+  | sort-by mem
+  | where name != nu
+  | first $count
+  | select pid name cpu mem command
+}
+# List processes by sampled CPU usage
+def cputop [count: int = 10] {
+  ps -l
+  | sort-by cpu
+  | where name != nu
+  | first $count
+  | select pid name cpu mem command
+}
+# Select a process with fzf and terminate it (Esc cancels).
+def fkill [] {
+  let result = (ps -l
+    | select pid name cpu mem command
+    | into string mem
+    | to tsv
+    | ^fzf --header-lines=1 --delimiter '\t' --prompt 'Kill 🔪> '
+    | complete)
+  if $result.exit_code != 0 or ($result.stdout | str trim | is-empty) {
+    return
+  }
+  let pid = ($result.stdout | split row "\t" | first | into int)
+  kill $pid -s 9
+  print $'💀 ($pid)'
+}
+alias fk = fkill
+alias o = xdg-open
 alias oh = with-env { http_proxy: "localhost:12334" https_proxy: "localhost:12334" } { opencode }
 alias he = hyprctl dispatch exit
 def hc [] {
@@ -176,6 +208,19 @@ def fl [] {
     nautilus . e> /dev/null
   }
 }
+
+# Alt+. inserts the previous command's last whitespace-delimited word.
+# No history cycling or quote parsing; use a shell-aware tokenizer if needed.
+$env.config.keybindings = ($env.config.keybindings | append {
+  name: insert_last_argument
+  modifier: alt
+  keycode: char_.
+  mode: [emacs vi_insert]
+  event: {
+    send: executehostcommand
+    cmd: 'history | last 1 | each {|entry| commandline edit --insert ($entry.command | str trim | split row --regex "\\s+" | last) } | ignore'
+  }
+})
 
 # History search
 def hs [
