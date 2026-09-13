@@ -6,7 +6,7 @@ def main [
     --copyid (-c)
     --printcmd (-p)
 ] {
-    let inv  = (open -r $file | from yaml)
+    let inv  = (open -r $file | from yaml --ignore-tags)
     print $"Loaded inventory from ($file)"
     let hosts = (
         $inv

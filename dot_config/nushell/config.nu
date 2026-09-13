@@ -111,7 +111,9 @@ def pf [] {
 alias sus = systemctl suspend
 alias rb = reboot
 alias sv = sudo v2raya
-alias ts = timeshift-launcher
+alias ts = sudo timeshift-gtk
+# create system backup
+alias tsb = sudo timeshift --create --comments "Before system update" --tags O
 alias record-selection = zsh -c 'wf-recorder -g "$(slurp)" -f a.mp4'
 # TODO: make code less cringe
 def screenshot [
