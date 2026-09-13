@@ -1,3 +1,4 @@
+import type { ExtensionAPI } from "@mariozechner/pi-coding-agent";
 import { execFile } from "node:child_process";
 import { existsSync } from "node:fs";
 import { homedir } from "node:os";
@@ -20,11 +21,23 @@ function playSound(index = 0): void {
   });
 }
 
-export default function (pi: {
-  events: { on(name: string, handler: (payload: unknown) => void): unknown };
-}) {
+export default function (pi: ExtensionAPI) {
+  let failed = false;
+  pi.on("agent_start", async () => { failed = false; });
+  pi.on("message_end", async ({ message }) => {
+    if (message.role === "assistant") {
+      failed = message.stopReason === "error" || message.stopReason === "aborted";
+    }
+  });
+
   pi.events.on("unipi:notify:sent", (payload) => {
-    const event = payload as { success?: boolean; platforms?: string[] };
+    const event = payload as {
+      eventType?: string;
+      success?: boolean;
+      platforms?: string[];
+      suppressedPlatforms?: string[];
+    };
+    if (failed && (event.eventType === "agent_end" || event.eventType === "agent_settled")) return;
     if (
       event.success &&
       event.platforms?.includes("native") &&
