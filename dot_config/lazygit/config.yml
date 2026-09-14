@@ -22,3 +22,4 @@ customCommands:
     description: Preview image
     command: 'kitten icat --hold {{.SelectedPath | quote}}'
     output: terminal
+disableStartupPopups: true

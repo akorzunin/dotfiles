@@ -1,5 +1,8 @@
 [mgr]
 show_hidden = true
+sort_by = "mtime"
+sort_reverse = true
+sort_dir_first = true
 # Parent / current directory / preview: 10% / 30% / 60%.
 ratio = [1, 2, 3]
 linemode = "size"
