@@ -179,7 +179,8 @@ $env.config = (
 )
 
 def desktop-sync [
-  --pull (-p)
+  --pull (-p)    # Pull repositories instead of fetching
+  --update (-u)  # Install missing dependencies and apply dotfiles links
 ] {
   def check_repo [repo_path: path, name: string, pull: bool] {
     print -n $"(ansi green)($name) config:(ansi reset)"
@@ -187,6 +188,9 @@ def desktop-sync [
       git -C $repo_path pull --rebase --autostash | ignore
     } else {
       git -C $repo_path fetch | ignore
+    }
+    if $env.LAST_EXIT_CODE != 0 {
+      error make {msg: $"Failed to sync ($name)"}
     }
     print -n $" (git -C $repo_path rev-parse --abbrev-ref HEAD) "
     print -n $"(git -C $repo_path status --porcelain=v2 -b |
@@ -198,6 +202,14 @@ def desktop-sync [
   check_repo ~/.config/nvim/ "Neovim" $pull
   check_repo ~/Documents/hyprconf/ "Hyprland" $pull
   check_repo ~/Documents/dotfiles/ "Dotfiles" $pull
+  if $update {
+    # Load setup from disk so -pu uses the freshly pulled version.
+    cd ~/Documents/dotfiles/
+    ^nu --no-config-file update.nu
+    if $env.LAST_EXIT_CODE != 0 {
+      error make {msg: "Dotfiles update failed"}
+    }
+  }
 }
 
 def ff-compress [file: path, out?: string, --crf (-c): int = 23] {
