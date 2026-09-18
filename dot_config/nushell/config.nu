@@ -400,3 +400,55 @@ def --env mkcd [...dirs: path] {
   mkdir ...$dirs
   cd ($dirs | last)
 }
+def vf [] {
+   let file = (fd --type f | lines | input list --fuzzy "Open file")
+   if ($file != null) {
+       nvim $file
+   }
+}
+def rgv [query?: string] {
+   let query = if ($query == null) {
+       input "Search: "
+   } else {
+       $query
+   }
+
+   if ($query | is-empty) { return }
+
+   let result = (rg --json -- $query | complete)
+
+   if $result.exit_code > 1 {
+       print $result.stderr
+       return
+   }
+
+   let matches = (
+       $result.stdout
+       | lines
+       | each { from json }
+       | where type == "match"
+       | each {|event|
+           {
+               file: $event.data.path.text
+               line: $event.data.line_number
+               text: ($event.data.lines.text | str trim)
+           }
+       }
+   )
+
+   if ($matches | is-empty) {
+       print "No matches."
+       return
+   }
+
+   let selected = (
+       $matches
+       | each {|m| $"($m.file):($m.line): ($m.text)" }
+       | input list --fuzzy --index "Open match"
+   )
+
+   if ($selected != null) {
+       let match = ($matches | get $selected)
+       nvim $"+($match.line)" -- $match.file
+   }
+}
