@@ -400,7 +400,7 @@ def --env mkcd [...dirs: path] {
   mkdir ...$dirs
   cd ($dirs | last)
 }
-def vf [] {
+def fdv [] {
    let file = (fd --type f | lines | input list --fuzzy "Open file")
    if ($file != null) {
        nvim $file
