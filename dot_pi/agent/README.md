@@ -17,4 +17,3 @@ settings["enabledModels"] = [
 path.write_text(json.dumps(settings, indent=2) + "\n")
 PY
 ```
-

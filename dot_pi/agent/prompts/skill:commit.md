@@ -23,4 +23,3 @@ Message rules:
 - Prefer the main user-facing change over mechanical details.
 - `git add -A && git commit -m "<message>"`.
 - Otherwise run `git commit -m "<message>"`.
-

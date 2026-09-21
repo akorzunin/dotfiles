@@ -23,4 +23,3 @@ No unrequested abstractions: no interface with one implementation, no factory fo
 No boilerplate, no scaffolding "for later", later can scaffold for itself.
 Deletion over addition. Boring over clever
 Mark deliberate simplifications that cut a real corner with a known ceiling (global lock, O(n²) scan, naive heuristic) with a comment naming the ceiling and upgrade path (# global lock, per-account locks if throughput matters).
-
