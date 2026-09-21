@@ -406,49 +406,24 @@ def fdv [] {
        nvim $file
    }
 }
-def rgv [query?: string] {
-   let query = if ($query == null) {
-       input "Search: "
-   } else {
-       $query
-   }
-
-   if ($query | is-empty) { return }
-
-   let result = (rg --json -- $query | complete)
-
-   if $result.exit_code > 1 {
-       print $result.stderr
+def rgv [query: string = ""] {
+   let search = 'sleep 0.1; [ -n {q} ] && rg --smart-case --line-number --no-heading --color=never -- {q} . || true'
+   let result = (with-env { SHELL: /bin/sh } {
+       let args = [
+           --disabled --query $query --prompt 'Search> '
+           --bind $'start:reload:($search)'
+           --bind $'change:reload:($search)'
+           --delimiter ':'
+           --preview 'bat --color=always --theme="Catppuccin Mocha" --style=numbers --highlight-line {2} -- {1}'
+           --preview-window 'right,60%,+{2}/2'
+       ]
+       "" | ^fzf ...$args | complete
+   })
+   if $result.exit_code != 0 or ($result.stdout | str trim | is-empty) {
        return
    }
 
-   let matches = (
-       $result.stdout
-       | lines
-       | each { from json }
-       | where type == "match"
-       | each {|event|
-           {
-               file: $event.data.path.text
-               line: $event.data.line_number
-               text: ($event.data.lines.text | str trim)
-           }
-       }
-   )
-
-   if ($matches | is-empty) {
-       print "No matches."
-       return
-   }
-
-   let selected = (
-       $matches
-       | each {|m| $"($m.file):($m.line): ($m.text)" }
-       | input list --fuzzy --index "Open match"
-   )
-
-   if ($selected != null) {
-       let match = ($matches | get $selected)
-       nvim $"+($match.line)" -- $match.file
-   }
+   # Colon/newline filenames are unsupported; use structured records if needed.
+   let match = ($result.stdout | str trim --right | split row ':')
+   nvim $"+($match | get 1)" -- ($match | first)
 }
