@@ -1,5 +1,6 @@
 ./dot_local/bin/sync.py link .local/bin/sync.py
 zoxide init nushell | save -f ~/.zoxide.nu
+sync.py link .config/sing-box/config-all-proxy.json
 sync.py link .config/yazi/yazi.toml
 sync.py link .config/yazi/theme.toml
 sync.py link .config/nushell/config.nu

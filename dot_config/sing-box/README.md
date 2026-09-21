@@ -2,60 +2,70 @@
 
 ## Config files
 
-- `config-all-proxy.json`: shared logging, inbounds, direct outbound, and routing. Safe to keep in the repo.
-- `~/.config/sing-box/vpn.json`: private VPN outbound settings. Keep outside the repo and do not add it to chezmoi.
+- `config-all-proxy.json` is the shared, non-secret configuration tracked in this repo.
+- `~/Dropbox/env/vpn.json` is the private configuration shared between machines. `~/.config/sing-box/vpn.json` is also accepted as a local-only fallback.
 
-sing-box merges the files passed with repeated `-c` flags. The private file must contain an `outbounds` array with an outbound tagged `vpn`; shared routes refer to that tag.
-
-On this machine the existing VPN settings have already been moved to the private file. On another machine, securely copy that file or create it using your provider's outbound settings:
+The private file only needs an `outbounds` array. Keep every VPN profile in that array and give each profile a unique `tag`:
 
 ```json
 {
   "outbounds": [
     {
       "type": "vless",
-      "tag": "vpn",
+      "tag": "vpn-nt1",
       "server": "YOUR_SERVER",
       "server_port": 443,
       "uuid": "YOUR_UUID"
+    },
+    {
+      "type": "vless",
+      "tag": "vpn-pl1",
+      "server": "ANOTHER_SERVER",
+      "server_port": 443,
+      "uuid": "ANOTHER_UUID"
     }
   ]
 }
 ```
 
-This example is only a skeleton: include your provider's required TLS/Reality and other transport settings.
+Include the TLS/Reality and transport fields required by the provider. A complete Hiddify/sing-box JSON file also works: setup keeps its proxy/group outbounds and drops app-specific DNS, direct, block, inbound, and route settings.
+
+`desktop-sync -u` builds `/etc/sing-box/config.json` from the shared file and the private file. If the private file does not already contain a selector tagged `proxy`, setup creates one from all ordinary private outbounds and adds `direct`. The selected outbound is persisted in sing-box's cache.
+
+The Dropbox file contains credentials, so keep it private and set restrictive permissions:
 
 ```bash
-chmod 600 ~/.config/sing-box/vpn.json
+chmod 600 ~/Dropbox/env/vpn.json
 ```
 
-## Validate and run
+## Install and use
 
-Install sing-box first. From this repository directory:
+Run this from a Nushell session after the private file has synced:
+
+```nu
+desktop-sync -u
+sb on
+sb status
+sb outbounds
+sb use vpn-nt1
+sb use direct
+sb off
+```
+
+`sb on` and `sb off` enable/disable the system `sing-box.service`. `sb use` changes the `proxy` selector through the local Clash API; it does not restart the tunnel. The TUN inbound requires the capabilities supplied by the packaged system service.
+
+Validate the generated configuration with:
 
 ```bash
-sing-box check \
-  -c "$PWD/config-all-proxy.json" \
-  -c "$HOME/.config/sing-box/vpn.json"
-
-sudo sing-box run \
-  -c "$PWD/config-all-proxy.json" \
-  -c "$HOME/.config/sing-box/vpn.json"
+sudo sing-box check -c /etc/sing-box/config.json
 ```
 
-The TUN inbound needs elevated networking privileges, hence `sudo`. The shell expands `$HOME` before sudo runs, so the private file is read from your user's home directory.
+The local mixed proxy is `127.0.0.1:1080`; UDP uses the selected outbound, while non-UDP Russian domains/IPs go direct and other traffic uses the selected outbound. Do not start `config-all-proxy.json` by itself: its `proxy` outbound is generated from the private file during setup.
 
-If deployed via chezmoi, replace `$PWD/config-all-proxy.json` with `$HOME/.config/sing-box/config-all-proxy.json` in both commands. Any service launching sing-box must likewise load both files with `-c`, using absolute paths.
+If Hiddify is no longer needed, stop its old user service separately:
 
-Do not launch the shared file alone: it references the private `vpn` outbound.
+```bash
+systemctl --user disable --now hiddify-mail-vpn.service
+```
 
-## Current routing
-
-- UDP goes through the VPN.
-- Remaining traffic to `.ru`, `.su`, `.рф` and IPs in the `geoip-ru` rule set goes direct.
-- Other traffic goes through the VPN.
-- Local mixed proxy: `127.0.0.1:1080`; system proxy configuration is enabled.
-
-## Secrets
-
-Do not commit `vpn.json`. If credentials were previously committed publicly, rotate them; deleting them from the current config does not remove Git history.
+Do not commit the private file or provider credentials. If credentials were previously committed publicly, rotate them; deleting them from the current config does not remove Git history.

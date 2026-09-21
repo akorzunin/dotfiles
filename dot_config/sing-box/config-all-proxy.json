@@ -3,13 +3,22 @@
     "level": "info",
     "timestamp": true
   },
+  "experimental": {
+    "cache_file": {
+      "enabled": true,
+      "path": "cache.db",
+      "cache_id": "desktop"
+    },
+    "clash_api": {
+      "external_controller": "127.0.0.1:9091"
+    }
+  },
   "inbounds": [
     {
       "type": "mixed",
       "tag": "mixed-in",
       "listen": "127.0.0.1",
-      "listen_port": 1080,
-      "set_system_proxy": true
+      "listen_port": 1080
     },
     {
       "type": "tun",
@@ -35,7 +44,7 @@
       {
         "network": "udp",
         "action": "route",
-        "outbound": "vpn"
+        "outbound": "proxy"
       },
       {
         "action": "sniff"
@@ -65,6 +74,6 @@
         "update_interval": "1d"
       }
     ],
-    "final": "vpn"
+    "final": "proxy"
   }
 }

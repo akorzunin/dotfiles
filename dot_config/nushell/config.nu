@@ -93,6 +93,47 @@ alias nn = nvim ~/.config/niri/config.kdl
 
 alias nc = config nu
 
+# Control the system sing-box service and its persistent outbound selector.
+def sb [
+  action: string = "status",
+  outbound?: string,
+] {
+  let api = "http://127.0.0.1:9091"
+  match $action {
+    "on" | "enable" => { ^sudo systemctl enable --now sing-box.service }
+    "off" | "disable" => { ^sudo systemctl disable --now sing-box.service }
+    "restart" => { ^sudo systemctl restart sing-box.service }
+    "status" => { ^systemctl status sing-box.service --no-pager }
+    "logs" => { ^journalctl -u sing-box.service -e --no-pager }
+    "outbounds" | "list" => {
+      let response = (^curl --fail-with-body --silent --show-error --noproxy "*" $"($api)/proxies" | complete)
+      if $response.exit_code != 0 {
+        print ($response.stderr | str trim)
+        error make {msg: "Could not connect to the sing-box API; is sing-box running?"}
+      }
+      $response.stdout | from json | get proxies
+    }
+    "change" | "use" | "select" => {
+      if $outbound == null or ($outbound | is-empty) {
+        error make {msg: "Usage: sb use <outbound-tag>"}
+      }
+      let payload = ({name: $outbound} | to json --raw)
+      let response = (^curl --fail-with-body --silent --show-error --noproxy "*" --request PUT --header "Content-Type: application/json" --data $payload $"($api)/proxies/proxy" | complete)
+      if $response.exit_code != 0 {
+        print ($response.stderr | str trim)
+        error make {msg: $"Could not select outbound '($outbound)'"}
+      }
+      print $"Selected ($outbound)"
+    }
+    _ => {
+      error make {msg: "Usage: sb [on|off|status|logs|outbounds|use <outbound-tag>]"}
+    }
+  }
+}
+alias vpn = sb
+alias vpn-on = sb on
+alias vpn-off = sb off
+
 $env.ANI_CLI_HIST_DIR = $env.HOME + "/Dropbox/ani-cli"
 $env.BAT_STYLE = "plain"
 $env.BAT_THEME = "ansi"
