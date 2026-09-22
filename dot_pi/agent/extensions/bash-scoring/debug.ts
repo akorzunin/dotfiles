@@ -23,7 +23,7 @@ export function formatDebug(entry: DebugEntry): string {
     const score = (value: number) => Number.isFinite(value) ? value.toFixed(3) : "invalid";
     lines.push(`attempt=${index + 1} exit=${attempt.exitCode ?? "unknown"} action=${attempt.action}`);
     lines.push(d
-      ? `category=${JSON.stringify(d.category)} confidence=${score(d.confidence)} validationOnly=${score(d.validationOnly)} successful=${score(d.successful)} retryFix=${score(d.retryFix)}`
+      ? `category=${JSON.stringify(d.category)} confidence=${score(d.confidence)} successful=${score(d.successful)} retryFix=${score(d.retryFix)}`
       : `scores unavailable: ${attempt.reason ?? "classifier returned no decision"}`);
   }
   if (!entry.completed) lines.push("tool failed or interrupted; original error/output preserved");

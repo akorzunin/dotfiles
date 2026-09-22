@@ -8,7 +8,7 @@ import { createExtension } from "../index.ts";
 import { formatDebug, type DebugEntry } from "../debug.ts";
 import type { Decision } from "../core.ts";
 
-const scores: Decision = { category: "test_lint_format", confidence: .99, validationOnly: .98, successful: .97, retryFix: .96 };
+const scores: Decision = { category: "test_lint_format", confidence: .99, successful: .97, retryFix: .96 };
 function harness(codes = [0], classifier = async () => scores) {
   let tool: any, renderer: any;
   let calls = 0;
@@ -79,7 +79,7 @@ test("debug includes both retry attempts even when tool throws", async () => {
   const text = formatDebug(h.entries[0]);
   assert.match(text, /attempt=1 exit=1 action=retry/);
   assert.match(text, /attempt=2 exit=1 action=keep/);
-  assert.match(text, /validationOnly=0.980 successful=0.970 retryFix=0.960/);
+  assert.match(text, /confidence=0.990 successful=0.970 retryFix=0.960/);
   assert.match(text, /tool failed or interrupted/);
 });
 test("debug reports missing scores and disabled optimizer", async () => {

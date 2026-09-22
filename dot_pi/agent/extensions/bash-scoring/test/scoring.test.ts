@@ -6,11 +6,11 @@ import { wrapOperations, type Audit } from "../workflow.ts";
 import { createExtension } from "../index.ts";
 import type { BashOperations, ExtensionAPI, ExtensionContext } from "@earendil-works/pi-coding-agent";
 
-const good: Decision = { category: "test_lint_format", confidence: .99, validationOnly: .99, successful: .99, retryFix: .99 };
+const good: Decision = { category: "test_lint_format", confidence: .99, successful: .99, retryFix: .99 };
 const state: State = { command: "pre-commit run --all-files", exitCode: 0, output: "passed", outputTruncated: false, attempt: 0 };
 const response = () => ({ model: defaults.model, usage: { input_tokens: 10, output_tokens: 4 }, answers: {
   category: { type: "choice", choice: "test_lint_format", probabilities: { test_lint_format: .99, other: .01 } },
-  validationOnly: { type: "noul", noul: .99 }, successful: { type: "noul", noul: .99 }, retryFix: { type: "noul", noul: .99 },
+  successful: { type: "noul", noul: .99 }, retryFix: { type: "noul", noul: .99 },
 } });
 test("strict typed decisions parsing", () => {
   assert.deepEqual(parseDecision(response()), good);
@@ -25,15 +25,13 @@ test("retry question judges applied fixes instead of guaranteeing future success
   assert.match(questions.retryFix.criteria.false, /suggested, not applied/);
 });
 test("classifier questions preserve explicitly requested inspection output", () => {
-  assert.match(questions.category.instructions, /validates and displays requested inspection output is mixed/);
+  assert.match(questions.category.criteria.test_lint_format, /excludes commands used to display or inspect/);
   assert.match(questions.category.criteria.other, /validation plus inspection output/);
-  assert.match(questions.validationOnly.instructions, /every subcommand exclusively/);
-  assert.match(questions.validationOnly.criteria.false, /git diff\/status\/log/);
 });
 test("only confident successful validation is compressed", () => {
   assert.equal(action(state, good), "ok");
   for (const category of ["read_explore", "build_install_deploy", "other"] as const) assert.equal(action(state, { ...good, category }), "keep");
-  for (const patch of [{ confidence: .8 }, { successful: .2 }, { validationOnly: .2 }, { confidence: NaN }]) assert.equal(action(state, { ...good, ...patch }), "keep");
+  for (const patch of [{ confidence: .8 }, { successful: .2 }, { confidence: NaN }]) assert.equal(action(state, { ...good, ...patch }), "keep");
   assert.equal(action({ ...state, outputTruncated: true }, good), "keep");
   assert.equal(action(state, undefined), "keep");
 });
@@ -61,14 +59,15 @@ test("retry keeps command, cwd, timeout and both outputs", async () => {
   assert.match(r.output, /attempt 0/); assert.match(r.output, /rerunning identical/); assert.match(r.output, /attempt 1/);
 });
 test("retry does not depend on output-compression confidence", async () => {
-  const reported: Decision = { category: "test_lint_format", confidence: 1, validationOnly: .37, successful: .04, retryFix: .67 };
+  const reported: Decision = { category: "test_lint_format", confidence: 1, successful: .04, retryFix: .67 };
   const failed = { ...state, command: "uvx prek run --all-files", exitCode: 1 };
   assert.equal(action(failed, reported, .6), "retry");
   assert.equal(action(failed, { ...reported, confidence: .59 }, .6), "keep");
   assert.equal(action(failed, { ...reported, retryFix: .59 }, .6), "keep");
   assert.equal(action(failed, reported, .6, false), "keep");
   assert.equal(action({ ...failed, attempt: 1 }, reported, .6), "keep");
-  assert.equal(action({ ...failed, exitCode: 0 }, { ...reported, successful: 1 }, .6), "keep");
+  assert.equal(action({ ...failed, exitCode: 0 }, reported, .6), "keep");
+  assert.equal(action({ ...failed, exitCode: 0 }, { ...reported, successful: 1 }, .6), "ok");
   const r = await run([1, 0], async input => input.attempt === 0 ? reported : good, { threshold: .6 });
   assert.equal(r.calls, 2);
   assert.deepEqual(r.audit.attempts.map(a => a.action), ["retry", "ok"]);

@@ -15,8 +15,8 @@ pi -e ~/.pi/agent/extensions/bash-scoring/
 ## Behavior
 
 1. Execute the original bash command using Pi's standard backend.
-2. Ask typed Decisions questions about its category, whether it is exclusively
-   validation, whether it actually succeeded, and whether an already-applied
+2. Ask typed Decisions questions about its category, whether it actually
+   succeeded, and whether an already-applied
    auto-fix justifies repeating the **identical** command.
 3. Confident successful `test_lint_format` results become `ok` **only in model
    context**. Output and decision scores remain in the UI/session transcript.
@@ -64,8 +64,8 @@ read, so repositories cannot redirect command/output data or credentials.
 ```
 
 `threshold` applies independently to two decisions:
-- Compression: category confidence + `validationOnly` + `successful` must pass.
-- Retry: category confidence + `retryFix` must pass; `validationOnly` does not gate retries.
+- Compression: category confidence + `successful` must pass.
+- Retry: category confidence + `retryFix` must pass.
 
 Both require the `test_lint_format` category. Exit status and the one-retry limit
 still apply. Scores are classifier estimates, not measured accuracy. `/bash-scoring on|off|status` controls the current session. Turning off
@@ -93,7 +93,7 @@ session only; reload/new session restores the configured value without modifying
 the file.
 
 Each completed call gets a transcript entry identified by its command and tool-call
-ID, showing every attempt's exit code, category, confidence, validation-only,
+ID, showing every attempt's exit code, category, confidence,
 success and retry-fix probabilities, threshold, and chosen action (`ok`, `keep`,
 `retry`). Failed calls are included; missing scores report a skip/failure reason.
 Entries are displayed alongside calls in the TUI, retained in session storage,
@@ -132,7 +132,7 @@ const classify: Classifier = async (state, signal) => {
   // Call your classifier with state.command/output/exitCode/attempt and signal.
   return {
     category: "test_lint_format", confidence: 0.99,
-    validationOnly: 0.99, successful: 0.99, retryFix: 0.01,
+    successful: 0.99, retryFix: 0.01,
   };
 };
 
