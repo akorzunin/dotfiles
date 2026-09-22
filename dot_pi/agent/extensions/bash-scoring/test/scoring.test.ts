@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { action, parseDecision, type Decision, type State, type Classifier } from "../core.ts";
+import { action, parseDecision, questions, type Decision, type State, type Classifier } from "../core.ts";
 import { configFrom, createClassifier, defaults } from "../provider.ts";
 import { wrapOperations, type Audit } from "../workflow.ts";
 import { createExtension } from "../index.ts";
@@ -17,6 +17,18 @@ test("strict typed decisions parsing", () => {
   for (const value of [null, {}, { answers: {} }]) assert.throws(() => parseDecision(value));
   const bad = response(); bad.answers.successful.noul = NaN;
   assert.throws(() => parseDecision(bad));
+});
+test("retry question judges applied fixes instead of guaranteeing future success", () => {
+  assert.match(questions.retryFix.instructions, /rerun once because it already applied automatic file fixes/);
+  assert.doesNotMatch(questions.retryFix.instructions, /safely pass/);
+  assert.match(questions.retryFix.criteria.true, /sole reported failure/);
+  assert.match(questions.retryFix.criteria.false, /suggested, not applied/);
+});
+test("classifier questions preserve explicitly requested inspection output", () => {
+  assert.match(questions.category.instructions, /validates and displays requested inspection output is mixed/);
+  assert.match(questions.category.criteria.other, /validation plus inspection output/);
+  assert.match(questions.validationOnly.instructions, /every subcommand exclusively/);
+  assert.match(questions.validationOnly.criteria.false, /git diff\/status\/log/);
 });
 test("only confident successful validation is compressed", () => {
   assert.equal(action(state, good), "ok");

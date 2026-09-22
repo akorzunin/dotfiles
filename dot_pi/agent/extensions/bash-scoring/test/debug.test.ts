@@ -10,13 +10,13 @@ import type { Decision } from "../core.ts";
 
 const scores: Decision = { category: "test_lint_format", confidence: .99, validationOnly: .98, successful: .97, retryFix: .96 };
 function harness(codes = [0], classifier = async () => scores) {
-  let tool: any, command: any, renderer: any;
+  let tool: any, renderer: any;
   let calls = 0;
   const entries: DebugEntry[] = [], notifications: string[] = [];
-  const handlers: Record<string, any> = {};
+  const handlers: Record<string, any> = {}, commands: Record<string, any> = {};
   const pi = {
     registerTool(value: unknown) { tool = value; },
-    registerCommand(_name: string, value: unknown) { command = value; },
+    registerCommand(name: string, value: unknown) { commands[name] = value; },
     registerEntryRenderer(_name: string, value: unknown) { renderer = value; },
     on(name: string, handler: unknown) { handlers[name] = handler; },
     appendEntry(type: string, data: DebugEntry) { assert.equal(type, "bash-scoring-debug"); entries.push(data); },
@@ -31,7 +31,8 @@ function harness(codes = [0], classifier = async () => scores) {
   };
   return { entries, notifications, handlers,
     start: () => handlers.session_start({}, ctx),
-    toggle: (args: string) => command.handler(args, ctx),
+    toggle: (args: string) => commands["bash-scoring"].handler(args, ctx),
+    score: (args: string) => commands["bash-score"].handler(args, ctx),
     run: (id = "call-id") => tool.execute(id, { command: "npm run lint" }, undefined, undefined, ctx),
     render: (data: DebugEntry) => renderer({ data }).render(80).join("\n"),
   };
@@ -50,6 +51,26 @@ test("debug toggles, explicit switches, status and default off", async () => {
   await h.run(); assert.equal(h.entries.length, 2);
   await h.toggle("debug"); await h.toggle("status"); assert.match(h.notifications.at(-1)!, /debug off/);
   await h.toggle("debug invalid"); assert.match(h.notifications.at(-1)!, /Usage:/);
+});
+test("bash-score runs an arbitrary command and shows its output and decision", async () => {
+  const h = harness();
+  await h.score("printf 'hello'");
+  assert.equal(h.entries.length, 1);
+  assert.equal(h.entries[0].command, "printf 'hello'");
+  assert.equal(h.entries[0].toolCallId, "manual");
+  assert.match(h.render(h.entries[0]), /attempt=1 exit=0 action=ok/);
+  assert.match(formatDebug(h.entries[0]), /--- command output ---\noriginal output/);
+  await h.score("   ");
+  assert.equal(h.entries.length, 1);
+  assert.match(h.notifications.at(-1)!, /Usage: \/bash-score/);
+});
+test("bash-score remains available when optimization and persistent debug are off", async () => {
+  const h = harness();
+  await h.toggle("off");
+  await h.score("npm test");
+  assert.equal(h.entries.length, 1);
+  assert.equal(h.entries[0].enabled, true);
+  assert.equal(h.entries[0].audit.attempts.length, 1);
 });
 test("debug includes both retry attempts even when tool throws", async () => {
   const h = harness([1, 1]); await h.toggle("debug on");

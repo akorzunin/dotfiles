@@ -29,8 +29,10 @@ pi -e ~/.pi/agent/extensions/bash-scoring/
    spill files still apply; this extension does not remove failed-call output.
 
 Categories: `test_lint_format`, `read_explore`, `build_install_deploy`, `other`.
-Commands spanning groups should be `other` and never optimized. Each scoring input
-includes the command, combined stdout/stderr, exit code, and attempt number. Success
+Commands spanning groups should be `other` and never optimized. This includes a
+validation check chained to requested inspection output, such as
+`git diff --check && git diff`. Each scoring input includes the command, combined
+stdout/stderr, exit code, and attempt number. Success
 requires exit code zero **and** classifier confirmation (to catch masked errors).
 Signals, timeouts and spawn errors never retry. API errors, invalid responses,
 missing credentials and classifier deadlines preserve normal bash behavior.
@@ -70,6 +72,18 @@ still apply. Scores are classifier estimates, not measured accuracy. `/bash-scor
 also restores original output in subsequent model context requests.
 
 ### Debug scores
+
+Run `/bash-score <command>` to execute any bash command immediately and add its
+output plus the complete scoring decision to the transcript. For example:
+
+```text
+/bash-score npm test
+```
+
+This works even when the optimizer or persistent debug mode is off. It uses the
+current scorer, threshold, retry setting, working directory, and execution
+backend, so an auto-fix result may rerun once just like a normal scored tool call.
+The entry is UI/session-only and is never sent to the model.
 
 `/bash-scoring debug` toggles debug output for subsequent bash calls. Use
 `/bash-scoring debug on` or `debug off` to set it explicitly; `status` includes

@@ -91,6 +91,49 @@ export function createExtension(options: PluginOptions = {}) {
         return { ...message, content: [{ type: "text" as const, text: "ok" }] };
       }),
     }));
+    pi.registerCommand("bash-score", {
+      description: "Run a bash command and show its scoring decision",
+      handler: async (args, ctx) => {
+        const command = args.trim();
+        if (!command) {
+          ctx.ui.notify("Usage: /bash-score <command>", "warning");
+          return;
+        }
+        const current = { ...config };
+        const audit: Audit = { attempts: [], compress: false };
+        const base = options.operations ?? createLocalBashOperations();
+        const operations = wrapOperations(
+          base,
+          options.classifier ?? createClassifier(current, ctx),
+          current,
+          audit,
+          () => {},
+        );
+        const tool = createBashToolDefinition(ctx.cwd, { operations });
+        let output = "(no output)";
+        let completed = false;
+        try {
+          const result = await tool.execute(
+            `bash-score-${Date.now()}`,
+            { command },
+            ctx.signal,
+            update => {
+              output = update.content.map(part => part.type === "text" ? part.text : "").join("") || output;
+            },
+            ctx,
+          );
+          output = result.content.map(part => part.type === "text" ? part.text : "").join("") || output;
+          completed = true;
+        } catch (error) {
+          output = error instanceof Error ? error.message : String(error);
+        }
+        pi.appendEntry<DebugEntry>("bash-scoring-debug", {
+          toolCallId: "manual", command,
+          model: options.classifier ? "custom adapter" : current.model,
+          threshold: current.threshold, enabled: true, completed, audit, output,
+        });
+      },
+    });
     pi.registerCommand("bash-scoring", {
       description: "Validation output optimizer: on, off, status, debug [on|off]",
       getArgumentCompletions: prefix => ["on", "off", "status", "debug", "debug on", "debug off"]

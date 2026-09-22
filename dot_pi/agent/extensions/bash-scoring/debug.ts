@@ -8,6 +8,8 @@ export interface DebugEntry {
   enabled: boolean;
   completed: boolean;
   audit: Audit;
+  /** Present only for explicit /bash-score runs; normal debug entries do not duplicate tool output. */
+  output?: string;
 }
 
 export function formatDebug(entry: DebugEntry): string {
@@ -26,5 +28,6 @@ export function formatDebug(entry: DebugEntry): string {
   }
   if (!entry.completed) lines.push("tool failed or interrupted; original error/output preserved");
   if (entry.enabled && !entry.audit.attempts.length) lines.push("no completed scoring attempt");
+  if (entry.output !== undefined) lines.push("", "--- command output ---", entry.output);
   return lines.join("\n");
 }
