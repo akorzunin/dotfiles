@@ -81,6 +81,20 @@ installed config active; it does not roll back.
 If the private file has no `proxy` selector, one is generated from ordinary VPN
 outbounds plus `direct`. Outbound selection is persisted by sing-box's cache.
 
+### Browser / desktop proxy settings
+
+```bash
+gsettings set org.gnome.system.proxy.http host '127.0.0.1'
+gsettings set org.gnome.system.proxy.http port 12334
+gsettings set org.gnome.system.proxy.https host '127.0.0.1'
+gsettings set org.gnome.system.proxy.https port 12334
+gsettings set org.gnome.system.proxy mode 'manual'
+```
+
+```bash
+gsettings set org.gnome.system.proxy mode 'none'
+```
+
 ## Check VPN connectivity
 
 `sb test` resolves the current selector and uses sing-box's Clash API to make
@@ -101,13 +115,6 @@ are affected; this does not set desktop proxy preferences or capture all traffic
 UDP uses the selected outbound; non-UDP Russian domains/IPs go direct, and
 other traffic uses the selected outbound.
 
-Stop Hiddify before applying a config so it releases port 12334. If applicable:
-
-```bash
-systemctl --user disable --now hiddify-mail-vpn.service
-```
-
-Do not run the shared JSON alone: its `proxy` outbound comes from a private file.
 To validate the installed config:
 
 ```bash
