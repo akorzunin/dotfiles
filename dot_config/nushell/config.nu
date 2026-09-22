@@ -93,10 +93,12 @@ alias nn = nvim ~/.config/niri/config.kdl
 
 alias nc = config nu
 
-# Control the system sing-box service and its persistent outbound selector.
+use sing-box.nu *
+
+# Config discovery works without a running service; outbound selection uses its API.
 def sb [
-  action: string = "status",
-  outbound?: string,
+  action: string@sb-actions = "list",
+  outbound?: string@sb-arguments,
 ] {
   let api = "http://127.0.0.1:9091"
   match $action {
@@ -105,7 +107,12 @@ def sb [
     "restart" => { ^sudo systemctl restart sing-box.service }
     "status" => { ^systemctl status sing-box.service --no-pager }
     "logs" => { ^journalctl -u sing-box.service -e --no-pager }
-    "outbounds" | "list" => {
+    "list" | "configs" => { sb-configs }
+    "apply" => {
+      if ($outbound | is-empty) { sb-apply } else { sb-apply $outbound }
+    }
+    "test" => { sb-test ($outbound | default "proxy") }
+    "outbounds" => {
       let response = (^curl --fail-with-body --silent --show-error --noproxy "*" $"($api)/proxies" | complete)
       if $response.exit_code != 0 {
         print ($response.stderr | str trim)
@@ -114,19 +121,29 @@ def sb [
       $response.stdout | from json | get proxies
     }
     "change" | "use" | "select" => {
-      if $outbound == null or ($outbound | is-empty) {
+      if ($outbound | is-empty) {
         error make {msg: "Usage: sb use <outbound-tag>"}
       }
+      let config_matches = (sb-configs | where {|file|
+        $file.name == $outbound or $file.name == $"($outbound).json"
+      })
+      if not ($config_matches | is-empty) {
+        print $"Tip: to load this config file, run sb apply ($outbound). Selection uses case-sensitive outbound tags, not filenames."
+      }
       let payload = ({name: $outbound} | to json --raw)
-      let response = (^curl --fail-with-body --silent --show-error --noproxy "*" --request PUT --header "Content-Type: application/json" --data $payload $"($api)/proxies/proxy" | complete)
+      let response = (^curl --fail-with-body --silent --show-error --noproxy "*" --max-time 5 --request PUT --header "Content-Type: application/json" --data $payload $"($api)/proxies/proxy" | complete)
       if $response.exit_code != 0 {
         print ($response.stderr | str trim)
-        error make {msg: $"Could not select outbound '($outbound)'"}
+        if $response.exit_code == 7 {
+          error make {msg: "Cannot reach the local sing-box API. Run sb apply <config> to load a config and start the service, or sb on to start the installed config."}
+        }
+        print ($response.stdout | str trim)
+        error make {msg: $"Could not select outbound '($outbound)'. Use an exact tag from sb outbounds; to load a file use sb apply <config>."}
       }
       print $"Selected ($outbound)"
     }
     _ => {
-      error make {msg: "Usage: sb [on|off|status|logs|outbounds|use <outbound-tag>]"}
+      error make {msg: "Usage: sb [list|apply [name-or-path]|on|off|restart|status|logs|test [outbound-tag]|outbounds|use <outbound-tag>]"}
     }
   }
 }

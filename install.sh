@@ -3,6 +3,7 @@ zoxide init nushell | save -f ~/.zoxide.nu
 sync.py link .config/sing-box/config-all-proxy.json
 sync.py link .config/yazi/yazi.toml
 sync.py link .config/yazi/theme.toml
+sync.py link .config/nushell/sing-box.nu
 sync.py link .config/nushell/config.nu
 sync.py link .config/lazygit/config.yml
 sync.py link .config/oh-my-posh/base.yaml
