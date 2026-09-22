@@ -73,9 +73,12 @@ def mount-dropbox [] {
     return
   }
 
+  if (($p.log | path dirname | path join bisync initialized) | path exists) {
+    error make {msg: "Local two-way sync is initialized; use --sync instead of mounting."}
+  }
   mkdir $p.dir $p.runtime ($p.log | path dirname)
   if not (ls -a $p.dir | is-empty) {
-    print --stderr "Warning: existing local files will be hidden while Dropbox is mounted; they are not uploaded."
+    error make {msg: "Dropbox contains local files; refusing to hide them with a mount. Use --pull, --push, or --sync."}
   }
   chmod 700 $p.runtime
   rm -f $p.socket
@@ -87,7 +90,6 @@ def mount-dropbox [] {
       --rc
       --rc-addr $"unix://($p.socket)"
       --rc-no-auth
-      --allow-non-empty
     | into int
   )
 
@@ -105,6 +107,30 @@ def mount-dropbox [] {
 
   do --ignore-errors { ^kill $pid }
   error make {msg: $"Dropbox mount timed out. See ($p.log)"}
+}
+
+def unmount-dropbox [] {
+  let p = (paths)
+  if not (is-mounted $p.dir) {
+    print $"Dropbox is already unmounted: ($p.dir)"
+    return
+  }
+  if (which fusermount3 | is-empty) {
+    error make {msg: "fusermount3 is required to unmount Dropbox"}
+  }
+  require-mount | ignore
+  let vfs = (rc $p.socket vfs/stats)
+  # Fail closed if upload status cannot be read. Close writers before unmounting;
+  # the status check and unmount cannot be atomic with application writes.
+  let cache = ($vfs | get diskCache)
+  if $cache.uploadsQueued != 0 or $cache.uploadsInProgress != 0 or $cache.erroredFiles != 0 or $cache.outOfSpace {
+    error make {msg: "Refusing to unmount: uploads are pending or the cache has errors. Run --check and resolve them first."}
+  }
+  ^fusermount3 -u $p.dir
+  if $env.LAST_EXIT_CODE != 0 {
+    error make {msg: "Unmount failed. Close applications and terminals accessing ~/Dropbox, then retry --unmount."}
+  }
+  print $"Dropbox unmounted: ($p.dir)"
 }
 
 def tray [] {
@@ -189,7 +215,88 @@ def force-sync [] {
   print $"Prioritized ($items | length) queued upload\(s\) and refreshed Dropbox."
 }
 
+# One lock per local folder; transfers are serialized, not concurrent.
+def transfer [mode: string, dry_run: bool, initialize: bool] {
+  let p = (paths)
+  if (is-mounted $p.dir) {
+    error make {msg: "Close applications using Dropbox, then run: dropbox-sync --unmount"}
+  }
+  let remote = (dropbox-remote)
+  let state = ($p.log | path dirname | path join bisync)
+  let ready = ($state | path join initialized)
+  if $mode == "sync" and not $initialize and not ($ready | path exists) {
+    error make {msg: "Initialize first: --sync --init --dry-run, then --sync --init. Initialization prefers Dropbox for matching paths; back up both sides first."}
+  }
+  if $mode != "sync" and ($ready | path exists) {
+    error make {msg: "Bisync is initialized; use --sync instead. One-way copies would invalidate its change tracking."}
+  }
+  if $mode == "push" and not ($p.dir | path exists) {
+    error make {msg: "Local Dropbox folder does not exist; nothing to upload."}
+  }
+  mkdir $p.dir $state
+  mut args = if $mode == "pull" {
+    [copy $remote $p.dir --update]
+  } else if $mode == "push" {
+    [copy $p.dir $remote --update]
+  } else {
+    [bisync $p.dir $remote --workdir $state --resilient --recover --conflict-resolve none --conflict-loser num]
+  }
+  if $initialize { $args = ($args | append [--resync --resync-mode path2]) }
+  if $dry_run { $args = ($args | append '--dry-run') }
+  # Keep replaced copy destinations outside the synced tree, on the same backend.
+  if $mode != "sync" {
+    let stamp = (date now | format date "%Y%m%dT%H%M%S%f")
+    let backup = if $mode == "pull" {
+      $p.log | path dirname | path join backups $stamp
+    } else {
+      $"($remote).dropbox-sync-backups/($stamp)"
+    }
+    $args = ($args | append [--backup-dir $backup --exclude /.dropbox-sync-backups/**])
+  } else {
+    $args = ($args | append [--exclude /.dropbox-sync-backups/**])
+  }
+  ^flock --nonblock ($state | path join transfer.lock) rclone ...$args --verbose --contimeout 15s --timeout 1m
+  if $env.LAST_EXIT_CODE != 0 {
+    error make {msg: "Transfer failed or another transfer is running. Inspect rclone's output; do not automatically reinitialize bisync after errors."}
+  }
+  if $initialize and not $dry_run { "" | save --force $ready }
+}
+
+def schedule [interval: string] {
+  let p = (paths)
+  let ready = ($p.log | path dirname | path join bisync initialized)
+  if not ($ready | path exists) or (is-mounted $p.dir) {
+    error make {msg: "Unmount Dropbox and complete --sync --init before enabling the schedule."}
+  }
+  if $interval !~ '^[1-9][0-9]*(s|min|h)$' {
+    error make {msg: "Interval must be a positive integer followed by s, min, or h (for example 30s or 5min)."}
+  }
+  let units = (($env.XDG_CONFIG_HOME? | default ($env.HOME | path join .config)) | path join systemd user)
+  mkdir $units
+  let script = ($env.CURRENT_FILE | path expand)
+  let nu_bin = (which nu | first | get path)
+  # systemd treats percent signs as specifiers, even inside quotes.
+  let command = ([$nu_bin $script] | each {|s| '"' + ($s | str replace --all '\' '\\' | str replace --all '"' '\"' | str replace --all '%' '%%' | str replace --all '$' '$$') + '"' } | str join ' ')
+  $"[Unit]\nDescription=Two-way Dropbox sync\n\n[Service]\nType=oneshot\nExecStart=($command) --sync\n" | save --force ($units | path join dropbox-sync.service)
+  $"[Unit]\nDescription=Periodically sync Dropbox\n\n[Timer]\nOnStartupSec=30s\nOnUnitInactiveSec=($interval)\nAccuracySec=1s\n\n[Install]\nWantedBy=timers.target\n" | save --force ($units | path join dropbox-sync.timer)
+  ^systemctl --user daemon-reload
+  if $env.LAST_EXIT_CODE != 0 { error make {msg: "systemd user daemon-reload failed"} }
+  ^systemctl --user enable --now dropbox-sync.timer
+  if $env.LAST_EXIT_CODE != 0 { error make {msg: "Could not enable timer"} }
+  ^systemctl --user restart dropbox-sync.timer
+  if $env.LAST_EXIT_CODE != 0 { error make {msg: "Could not restart timer"} }
+  print $"Sync scheduled every ($interval) after completion while your user manager runs. Logs: journalctl --user -u dropbox-sync.service"
+}
+
 def main [
+  --pull        # Download without deleting; skip newer local files, back up replacements
+  --push        # Upload without deleting; skip newer remote files, back up replacements
+  --sync        # Run two-way sync (including deletions); preserve conflicting versions
+  --init        # Initialize/rebuild bisync tracking; Dropbox wins matching paths
+  --dry-run     # Preview a transfer without changing files
+  --schedule: string # Enable two-way sync timer, e.g. --schedule 30s
+  --unschedule  # Disable timer and stop its running transfer
+  --unmount (-u) # Unmount Dropbox; refuse pending uploads or cache errors
   --setup (-s)  # Open rclone's interactive configuration
   --force (-f)  # Upload queued local changes now and refresh the mount
   --check (-c)  # Show mount, connection, upload, and error status
@@ -201,9 +308,23 @@ def main [
   if $tray and (which python3 | is-empty) {
     error make {msg: "python3 is required for --tray"}
   }
-  if ([$setup $force $check $tray] | where {$in} | length) > 1 {
+  if ([$setup $force $check $tray $pull $push $sync ($schedule != null) $unschedule $unmount] | where {$in} | length) > 1 {
     error make {msg: "Choose only one option"}
   }
 
-  if $setup { setup } else if $force { force-sync } else if $check { check-sync } else if $tray { tray } else { mount-dropbox }
+  if $init and not $sync { error make {msg: "--init requires --sync"} }
+  if $dry_run and not ($pull or $push or $sync) { error make {msg: "--dry-run requires --pull, --push, or --sync"} }
+  if $pull or $push or $sync {
+    if (which flock | is-empty) { error make {msg: "flock is required for local transfers"} }
+    transfer (if $pull { "pull" } else if $push { "push" } else { "sync" }) $dry_run $init
+  } else if $schedule != null {
+    schedule $schedule
+  } else if $unschedule {
+    ^systemctl --user disable --now dropbox-sync.timer
+    if $env.LAST_EXIT_CODE != 0 { error make {msg: "Could not disable timer"} }
+    ^systemctl --user stop dropbox-sync.service
+    if $env.LAST_EXIT_CODE != 0 { error make {msg: "Could not stop transfer"} }
+  } else if $unmount {
+    unmount-dropbox
+  } else if $setup { setup } else if $force { force-sync } else if $check { check-sync } else if $tray { tray } else { mount-dropbox }
 }
