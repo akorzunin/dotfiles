@@ -485,3 +485,4 @@ def rgv [query: string = ""] {
    let match = ($result.stdout | str trim --right | split row ':')
    nvim $"+($match | get 1)" -- ($match | first)
 }
+alias or = openrgb --noautoconnect --device "MSI MAG B650M" --mode Static --brightness 15 --color 00FFFF
