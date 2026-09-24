@@ -1,6 +1,6 @@
 # Run from the dotfiles repository root: nu --no-config-file update.nu
 # Add required packages here as configs gain dependencies.
-let packages = [git-delta sing-box curl]
+let packages = [git-delta sing-box curl zoxide carapace-bin rclone]
 let missing = ($packages | where {|package|
   (^pacman -Q $package | complete).exit_code != 0
 })
@@ -9,6 +9,22 @@ if not ($missing | is-empty) {
   if $env.LAST_EXIT_CODE != 0 {
     error make {msg: "Dependency installation failed"}
   }
+}
+
+# `source` in config.nu resolves at parse time, even inside a lazy function.
+# Prepare both generated files before linking the config on a fresh home.
+let zoxide = ($env.HOME | path join .zoxide.nu)
+if not ($zoxide | path exists) {
+  let generated = (^zoxide init nushell | complete)
+  if $generated.exit_code != 0 { error make {msg: "zoxide initialization failed"} }
+  $generated.stdout | save --force $zoxide
+}
+let carapace = ($nu.cache-dir | path join carapace.nu)
+if not ($carapace | path exists) {
+  mkdir $nu.cache-dir
+  let generated = (^carapace _carapace nushell | complete)
+  if $generated.exit_code != 0 { error make {msg: "carapace initialization failed"} }
+  $generated.stdout | save --force $carapace
 }
 
 use dot_config/nushell/sing-box.nu *

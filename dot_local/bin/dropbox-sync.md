@@ -3,6 +3,23 @@
 Requires Nushell, rclone (with bisync `--recover` support), and `flock`.
 Scheduling requires a running systemd user manager.
 
+## First-time connection
+
+Run `dropbox-sync --setup`. In rclone's menu choose `n` (New remote),
+use `dropbox` for the remote name, and choose **Dropbox** for **Storage**
+(type `dropbox` or select its listed number). Follow the browser authorization,
+confirm the remote, and quit. The remote name is not a local path:
+`~/Dropbox` is the separate folder this script mounts or syncs. If you already
+have exactly one Dropbox remote under another name, the script uses it too.
+
+Over SSH with no browser on the VM, answer `n` to rclone's browser-auth
+question. On your computer with a browser and rclone installed run
+`rclone authorize dropbox`, then paste the returned token at the VM's
+`config_token>` prompt. Keep that token private. Alternatively, start the
+SSH session from your computer with `ssh -L 53682:localhost:53682 archlinux`,
+answer `y` to browser auth, and open the printed `127.0.0.1:53682` URL in
+your computer's browser. The port forward must be active throughout auth.
+
 ## Move from the mount
 
 Close applications and terminals using Dropbox, then run

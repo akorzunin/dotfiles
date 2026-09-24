@@ -57,7 +57,17 @@ def rc [socket: path, command: string, ...args: string] {
 }
 
 def setup [] {
-  print 'Create a Dropbox remote; any name is fine.'
+  print 'rclone config answers (the two dropbox values are BOTH required):'
+  print '  n) New remote  -> n'
+  print '  name> dropbox          <- REMOTE NAME'
+  print '  Storage> dropbox       <- BACKEND TYPE (or its listed number)'
+  print 'Leave client ID/secret blank unless you have your own app. Skip advanced config.'
+  print 'SSH without a browser on the VM: at "Use web browser to automatically authenticate?" answer n.'
+  print 'On your local computer (with a browser and rclone), run: rclone authorize dropbox'
+  print 'Paste the resulting token into the VM config_token prompt (not into chat).'
+  print 'Alternatively connect from your computer with: ssh -L 53682:localhost:53682 archlinux'
+  print 'Then answer y to browser auth and open the printed 127.0.0.1:53682 URL on your computer.'
+  print 'Confirm the remote and quit. ~/Dropbox is the separate local folder, not the remote name.'
   ^rclone config
   if $env.LAST_EXIT_CODE != 0 {
     error make {msg: "rclone configuration failed"}
