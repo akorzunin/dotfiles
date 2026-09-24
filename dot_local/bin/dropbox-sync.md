@@ -26,6 +26,9 @@ They are not a two-way conflict detector. Replacements are backed up under
 `$XDG_STATE_HOME/rclone/backups` (default `~/.local/state/rclone/backups`) for
 pulls, and `.dropbox-sync-backups` on Dropbox for pushes. That remote backup
 folder is excluded from transfers. Backups are not automatically pruned.
+Local Dropbox desktop-client metadata (`.dropbox`, `.dropbox.attr`, `.dropbox.cache`)
+and `.Trash-*` folders at the Dropbox root are excluded from all transfers:
+Dropbox rejects some of these names, and the cache/trash are not user data.
 
 ## Two-way synchronization
 
@@ -49,7 +52,12 @@ interval after each run finishes. Transfers do not overlap on the same machine.
 Offline attempts fail; the next timer invocation retries. Bisync listings live
 in `$XDG_STATE_HOME/rclone/bisync`, not the disposable cache directory. Some
 errors still require manual recovery: inspect logs and back up both sides before
-considering `--init` again. Never automatically reinitialize after a failure.
+considering `--sync --init --dry-run`, then `--sync --init` to rebuild tracking.
+Never automatically reinitialize after a failure. On this machine, a failed
+initialization involving `path/disallowed_name` can be retried with those
+commands: the desktop-client files are now excluded. If the error persists,
+inspect rclone's verbose output for another rejected path rather than repeatedly
+retrying.
 
 ```
 systemctl --user status dropbox-sync.timer dropbox-sync.service

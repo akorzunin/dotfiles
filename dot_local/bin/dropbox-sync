@@ -243,6 +243,10 @@ def transfer [mode: string, dry_run: bool, initialize: bool] {
   }
   if $initialize { $args = ($args | append [--resync --resync-mode path2]) }
   if $dry_run { $args = ($args | append '--dry-run') }
+  # Leftovers from the Dropbox desktop client are local-only (and .dropbox is
+  # rejected by the API). Apply the same filters to every transfer, including
+  # bisync resync, so these files never enter its change tracking.
+  $args = ($args | append [--exclude /.dropbox --exclude /.dropbox.attr --exclude /.dropbox.cache/** --exclude /.Trash-*/**])
   # Keep replaced copy destinations outside the synced tree, on the same backend.
   if $mode != "sync" {
     let stamp = (date now | format date "%Y%m%dT%H%M%S%f")
@@ -257,7 +261,7 @@ def transfer [mode: string, dry_run: bool, initialize: bool] {
   }
   ^flock --nonblock ($state | path join transfer.lock) rclone ...$args --verbose --contimeout 15s --timeout 1m
   if $env.LAST_EXIT_CODE != 0 {
-    error make {msg: "Transfer failed or another transfer is running. Inspect rclone's output; do not automatically reinitialize bisync after errors."}
+    error make {msg: "Transfer failed or another transfer is running. Inspect rclone's output. If bisync aborted, back up both sides and review --sync --init --dry-run before retrying --sync --init; do not automatically reinitialize."}
   }
   if $initialize and not $dry_run { "" | save --force $ready }
 }
