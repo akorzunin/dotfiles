@@ -40,7 +40,9 @@ Protect private files with `chmod 600`; never commit credentials.
 
 ## Install and use
 
-Run `desktop-sync -u`, then open a new Nushell session to load the commands.
+Install `sing-box` and `curl` first (`sudo pacman -S --needed sing-box curl`).
+Run `nu --no-config-file update.nu` from the dotfiles repo (or `desktop-sync -u`
+on a configured desktop), then open a new Nushell session to load the commands.
 Setup preserves an existing installed config. On first installation it installs
 an available config automatically only when there is exactly one candidate.
 

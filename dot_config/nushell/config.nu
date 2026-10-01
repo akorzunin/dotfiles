@@ -77,9 +77,12 @@ $env.PATH = ($env.PATH | append '~/.local/bin')
 $env.PATH = ($env.PATH | append '~/.npm-global/bin')
 $env.PATH = ($env.PATH | append '~/go/bin')
 $env.PATH = ($env.PATH | append '~/.local/share/pnpm')
-# oh-my-posh init nu
-oh-my-posh init nu --config ~/.config/oh-my-posh/base.yaml
-source ~/.zoxide.nu
+if not (which oh-my-posh | is-empty) {
+  oh-my-posh init nu --config ~/.config/oh-my-posh/base.yaml
+}
+# Keep ordinary cd available on servers without zoxide.
+def --env z [dir: directory = "~"] { cd $dir }
+source (if ("~/.zoxide.nu" | path exists) { "~/.zoxide.nu" } else { null })
 alias cd = z
 alias dt = zsh -c date
 
@@ -94,6 +97,7 @@ alias nn = nvim ~/.config/niri/config.kdl
 alias nc = config nu
 
 use sing-box.nu *
+use push-check.nu
 
 # Config discovery works without a running service; outbound selection uses its API.
 def sb [
@@ -404,15 +408,20 @@ def type [q: string, --all(-a)] {
     which $q | to yaml | bat -l yaml
 }
 
-# Initialize carapace lazily with `c`.
+# Enable optional completions lazily with `c`.
 def --env enable-carapace [] {
-  $env.CARAPACE_BRIDGES = 'zsh,fish,bash,inshellisense'
+  if (which carapace | is-empty) {
+    print "Carapace is not installed; keeping Nushell completions."
+    return
+  }
   let cache = $"($nu.cache-dir)/carapace.nu"
   if not ($cache | path exists) {
-    mkdir $nu.cache-dir
-    carapace _carapace nushell | save --force $cache
+    print "Run nu --no-config-file update.nu from the dotfiles repo, then restart Nu and run c."
+    return
   }
-  source $"($nu.cache-dir)/carapace.nu"
+  $env.CARAPACE_BRIDGES = 'zsh,fish,bash,inshellisense'
+  # source is parsed before execution; a missing cache must not block startup.
+  source (if ($"($nu.cache-dir)/carapace.nu" | path exists) { $"($nu.cache-dir)/carapace.nu" } else { null })
 }
 alias c = enable-carapace
 
