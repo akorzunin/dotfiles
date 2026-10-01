@@ -384,6 +384,14 @@ $env.config.history = {
 }
 def nt [msg: string = 'Done!'] {
     notify-send $msg
+    let sound = ($env.PI_NOTIFY_SOUND? | default ($nu.home-dir | path join '.unipi/config/notify/complete.wav'))
+    if not ($sound | path exists) { return }
+    let players = if $nu.os-info.name == 'macos' { ['afplay'] } else { ['pw-play', 'paplay', 'aplay'] }
+    for player in $players {
+        if (which $player | is-empty) { continue }
+        let result = (^$player $sound | complete)
+        if $result.exit_code == 0 { return }
+    }
 }
 def nt-hist [] {
     dunstctl history | from json | get data | select message.data | get 'message.data' | first | each {|e| $e | str replace -a -r '<.+?>' ""} | reverse
