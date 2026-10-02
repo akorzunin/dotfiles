@@ -69,6 +69,20 @@ class BootstrapTest(unittest.TestCase):
             # Idempotent without installing packages or requiring Hyprconf.
             self.run_nu(env, "--no-config-file", "update.nu")
 
+    def test_config_only_link_loads_repo_modules_before_update(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            home = Path(temporary)
+            env = self.server_env(home)
+            config_dir = home / ".config/nushell"
+            config_dir.mkdir(parents=True)
+            (config_dir / "config.nu").symlink_to(ROOT / "dot_config/nushell/config.nu")
+            # Simulate a pull introducing modules not yet linked by update.nu.
+            result = self.start_shell(home, env,
+                                      'help sb | ignore; help push-check | ignore; print "STARTUP_OK"')
+            self.assertIn("STARTUP_OK", result.stdout)
+            self.assertFalse((config_dir / "push-check.nu").exists())
+            self.assertFalse((config_dir / "sing-box.nu").exists())
+
     def test_missing_python_installs_only_python(self):
         with tempfile.TemporaryDirectory() as temporary:
             home = Path(temporary)
@@ -132,8 +146,14 @@ class BootstrapTest(unittest.TestCase):
         with tempfile.TemporaryDirectory() as temporary:
             home = Path(temporary)
             env = self.server_env(home)
+            config_dir = home / ".config/nushell"
+            config_dir.mkdir(parents=True)
+            (config_dir / "env.nu").write_text('error make {msg: "broken env"}\n')
+            (config_dir / "config.nu").symlink_to(home / "broken.nu")
+            (home / "broken.nu").write_text('use nonexistent-module.nu *\n')
+            # Bootstrap must run even when the current shell config cannot parse.
             result = subprocess.run([str(home / "bin/sh"), "install.sh"], cwd=ROOT,
-                                    env=env, text=True, capture_output=True, timeout=30)
+                                    env=env, text=True, input="y\n", capture_output=True, timeout=30)
             self.assertEqual(result.returncode, 0, result.stderr + result.stdout)
             self.assertTrue((home / ".config/nushell/config.nu").is_symlink())
             self.start_shell(home, env, 'print "STARTUP_OK"')

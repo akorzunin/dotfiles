@@ -12,6 +12,19 @@ nu --no-config-file update.nu
 nu
 ```
 
+If your normal shell will not start, launch `nu --no-config-file` (for example
+as your terminal's command), then run:
+
+```sh
+sh ~/Documents/dotfiles/install.sh
+```
+
+You can also run that script from Bash/sh. It starts the updater without loading
+`config.nu` or `env.nu`; a working interactive Nu session is not required.
+Repo module imports resolve beside the real config file, so newly pulled modules
+work before setup creates their individual links. This does not hide syntax
+errors: use the config-free shell to repair those.
+
 Setup links the configs and scripts. Python is the only additional required
 package; if absent, setup installs it with `sudo pacman`. No AUR helper, desktop
 checkout, or desktop packages are required on a server.

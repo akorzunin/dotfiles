@@ -96,8 +96,11 @@ alias nn = nvim ~/.config/niri/config.kdl
 
 alias nc = config nu
 
-use sing-box.nu *
-use push-check.nu
+# Resolve the config symlink before importing siblings: git pulls can add modules
+# before update.nu has created their individual ~/.config/nushell links.
+const config_dir = (path self | path expand | path dirname)
+use ($config_dir | path join sing-box.nu) *
+use ($config_dir | path join push-check.nu)
 
 # Config discovery works without a running service; outbound selection uses its API.
 def sb [
