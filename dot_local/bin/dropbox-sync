@@ -249,7 +249,8 @@ def transfer [mode: string, dry_run: bool, initialize: bool] {
   } else if $mode == "push" {
     [copy $p.dir $remote --update]
   } else {
-    [bisync $p.dir $remote --workdir $state --resilient --recover --conflict-resolve none --conflict-loser num]
+    # Timestamp ties still need manual resolution; keep the loser for recovery.
+    [bisync $p.dir $remote --workdir $state --resilient --recover --conflict-resolve newer --conflict-loser num]
   }
   if $initialize { $args = ($args | append [--resync --resync-mode path2]) }
   if $dry_run { $args = ($args | append '--dry-run') }
@@ -305,7 +306,7 @@ def schedule [interval: string] {
 def main [
   --pull        # Download without deleting; skip newer local files, back up replacements
   --push        # Upload without deleting; skip newer remote files, back up replacements
-  --sync        # Run two-way sync (including deletions); preserve conflicting versions
+  --sync        # Run two-way sync (including deletions); newer wins, keep conflict copies
   --init        # Initialize/rebuild bisync tracking; Dropbox wins matching paths
   --dry-run     # Preview a transfer without changing files
   --schedule: string # Enable two-way sync timer, e.g. --schedule 30s

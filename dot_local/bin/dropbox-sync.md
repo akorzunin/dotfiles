@@ -61,8 +61,15 @@ dropbox-sync --schedule 30s
 
 Initialize separately on each machine. Thereafter use `--sync`, not pull/push:
 one-way copying would interfere with bisync change tracking. Regular bisync
-propagates deletions and preserves concurrent conflicts as renamed files for
-manual resolution. It is not application-level state merging.
+propagates deletions. When both sides change a file, the newer modification time
+wins and keeps the original filename; the losing version is preserved as a
+numbered `.conflict` copy. Equal timestamps can still leave both versions renamed
+for manual resolution. Keep device clocks accurate: newer does not necessarily
+mean correct. It is not application-level state merging.
+
+This policy only applies to future conflicts. For files already renamed by the
+old policy, restore the desired conflict copy to its original filename once,
+then run `--sync` (not `--init`). Apply the updated script on every syncing machine.
 
 The timer runs 30 seconds after user-manager startup, then at the selected
 interval after each run finishes. Transfers do not overlap on the same machine.
