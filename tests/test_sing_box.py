@@ -73,9 +73,35 @@ class SingBoxTest(unittest.TestCase):
         self.assertNotEqual(result.returncode, 0)
         self.assertIn("Unknown outbound", result.stderr)
 
+    def test_current(self):
+        systemctl = self.home / "bin/systemctl"
+        systemctl.write_text('#!/bin/sh\necho inactive\nexit 3\n')
+        systemctl.chmod(0o755)
+        result = self.nu('sb-current | to json')
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertIsNone(json.loads(result.stdout)["path"])
+        result = self.nu('install-sing-box-config config1')
+        self.assertEqual(result.returncode, 0, result.stderr)
+        result = self.nu('sb-current | to json')
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(json.loads(result.stdout), {
+            "name": "config1.json",
+            "path": str(self.home / ".local/share/config1.json"),
+            "installed_path": "/etc/sing-box/config.json",
+            "service": "inactive",
+        })
+        self.profile('.local/share/second.json')
+        result = self.nu('install-sing-box-config second')
+        self.assertEqual(result.returncode, 0, result.stderr)
+        result = self.nu('install-sing-box-config missing')
+        self.assertNotEqual(result.returncode, 0)
+        result = self.nu('sb-current | to json')
+        self.assertEqual(json.loads(result.stdout)["name"], "second.json")
+
     def test_completions(self):
         result = self.nu('sb-actions | to json')
         self.assertIn("apply", json.loads(result.stdout))
+        self.assertIn("current", json.loads(result.stdout))
         result = self.nu('sb-arguments "sb apply " | to json')
         self.assertEqual(json.loads(result.stdout)[0]["value"], "config1.json")
         self.profile("Dropbox/env/config1.json")

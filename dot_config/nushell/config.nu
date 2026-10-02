@@ -112,6 +112,7 @@ def sb [
     "status" => { ^systemctl status sing-box.service --no-pager }
     "logs" => { ^journalctl -u sing-box.service -e --no-pager }
     "list" | "configs" => { sb-configs }
+    "current" => { sb-current }
     "apply" => {
       if ($outbound | is-empty) { sb-apply } else { sb-apply $outbound }
     }
@@ -147,7 +148,7 @@ def sb [
       print $"Selected ($outbound)"
     }
     _ => {
-      error make {msg: "Usage: sb [list|apply [name-or-path]|on|off|restart|status|logs|test [outbound-tag]|outbounds|use <outbound-tag>]"}
+      error make {msg: "Usage: sb [list|current|apply [name-or-path]|on|off|restart|status|logs|test [outbound-tag]|outbounds|use <outbound-tag>]"}
     }
   }
 }

@@ -53,6 +53,7 @@ sb apply config1.json       # validate, install, restart, then test VPN
 sb apply ~/.local/share/config2.json
 sb on                      # also enable startup at boot
 sb status
+sb current                 # config name, source path, installed path, service state
 sb test                    # HTTPS connectivity + latency via the selected VPN
 sb test vpn-nt1             # test a server without changing selection
 sb outbounds               # show live outbound selectors
@@ -66,6 +67,11 @@ Press Tab after `sb ` for actions, after `sb apply ` for config files, and after
 `sb use ` / `sb select ` / `sb test ` for live outbound tags. Outbound completion
 requires the service to be running. Duplicate config names complete to full paths.
 The picker uses full paths too; canceling it leaves the service unchanged.
+
+`sb current` shows the last config installed by this user, even while stopped.
+Source tracking starts with the next installation via `sb apply` or setup;
+older installations show an unknown source. Changes made outside these commands
+are not tracked. The service state is not a VPN connectivity check; use `sb test`.
 
 `sb apply config1` also accepts the filename without `.json`. Config filenames
 and outbound tags are different: `sb apply nt1-ssh` loads `nt1-ssh.json`, while

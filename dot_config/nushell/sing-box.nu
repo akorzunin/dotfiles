@@ -1,5 +1,5 @@
 export def sb-actions [] {
-  [list configs apply test on off enable disable restart status logs outbounds use select change]
+  [list configs current apply test on off enable disable restart status logs outbounds use select change]
 }
 
 export def sb-arguments [context: string] {
@@ -25,6 +25,19 @@ export def sb-arguments [context: string] {
     } catch { [] })
   }
   []
+}
+
+# Tracks installs by this user; external config changes require reapplying via sb.
+export def sb-current [] {
+  let state = ($env.HOME | path join ".local/state/sing-box/current.json")
+  let source = if ($state | path exists) { open $state | get path } else { null }
+  let service = (^systemctl is-active sing-box.service | complete)
+  {
+    name: (if $source == null { "unknown (run sb apply)" } else { $source | path basename })
+    path: $source
+    installed_path: "/etc/sing-box/config.json"
+    service: ($service.stdout | str trim | default "unknown")
+  }
 }
 
 export def sb-apply [config?: string] {
@@ -173,6 +186,9 @@ export def install-sing-box-config [config: string, --restart] {
     print ($installed.stderr | str trim)
     error make {msg: "Could not install /etc/sing-box/config.json"}
   }
+  let state_dir = ($env.HOME | path join ".local/state/sing-box")
+  mkdir $state_dir
+  {path: $private} | to json | save --force ($state_dir | path join "current.json")
   if $restart {
     ^sudo systemctl restart sing-box.service
     if $env.LAST_EXIT_CODE != 0 {
@@ -186,4 +202,3 @@ export def install-sing-box-config [config: string, --restart] {
   }
   rm -rf $temp
 }
-
