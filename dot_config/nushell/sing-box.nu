@@ -1,5 +1,5 @@
 export def sb-actions [] {
-  [list configs current apply test on off enable disable restart status logs outbounds use select change]
+  [list configs current setup pull apply test on off enable disable restart status logs outbounds use select change]
 }
 
 export def sb-arguments [context: string] {
@@ -30,14 +30,69 @@ export def sb-arguments [context: string] {
 # Tracks installs by this user; external config changes require reapplying via sb.
 export def sb-current [] {
   let state = ($env.HOME | path join ".local/state/sing-box/current.json")
-  let source = if ($state | path exists) { open $state | get path } else { null }
+  let tracked = if ($state | path exists) { open $state } else { {} }
+  let file = ($tracked.path? | default null)
+  let url = ($tracked.url? | default null)
+  let source = if $url != null { "url" } else if $file != null { "file" } else { "unknown" }
   let service = (^systemctl is-active sing-box.service | complete)
+  let timer = (^systemctl is-enabled sing-box-update.timer | complete)
   {
-    name: (if $source == null { "unknown (run sb apply)" } else { $source | path basename })
-    path: $source
+    name: (if $source == "url" { "URL subscription" } else if $file == null { "unknown (run sb apply or sb setup)" } else { $file | path basename })
+    source: $source
+    url: $url
+    path: $file
+    auto_updates: (if $source == "url" and $timer.exit_code == 0 { "hourly (while sing-box is running)" } else { "disabled" })
     installed_path: "/etc/sing-box/config.json"
     service: ($service.stdout | str trim | default "unknown")
   }
+}
+
+# Only the root-owned updater is executed by the system timer; repo code stays unprivileged.
+export def sb-setup [] {
+  let url = (input --suppress-output "Config URL: " | str trim)
+  if $url == "" { print "Setup cancelled."; return }
+  const files = (path self | path expand | path dirname | path dirname | path join sing-box)
+  for item in [
+    [subscription.py /usr/local/libexec/sing-box-subscription.py]
+    [sing-box-update.service /etc/systemd/system/sing-box-update.service]
+    [sing-box-update.timer /etc/systemd/system/sing-box-update.timer]
+  ] {
+    ^sudo install -D -o root -g root -m 644 ($files | path join ($item | first)) ($item | last)
+    if $env.LAST_EXIT_CODE != 0 { error make {msg: "Could not install the URL updater"} }
+  }
+  ^sudo systemctl daemon-reload
+  if $env.LAST_EXIT_CODE != 0 { error make {msg: "systemd daemon-reload failed"} }
+  let response = ({url: $url} | to json --raw | ^sudo /usr/bin/python3 -I /usr/local/libexec/sing-box-subscription.py setup --json | complete)
+  track-subscription $response
+  ^sudo systemctl enable sing-box.service
+  if $env.LAST_EXIT_CODE != 0 { error make {msg: "Config installed, but could not enable sing-box at boot"} }
+  ^sudo systemctl enable --now sing-box-update.timer
+  if $env.LAST_EXIT_CODE != 0 { error make {msg: "Config installed, but could not enable automatic updates"} }
+  print "URL config installed; automatic updates enabled hourly. Use sb current or sb pull."
+}
+
+export def sb-pull [] {
+  if not ("/usr/local/libexec/sing-box-subscription.py" | path exists) {
+    error make {msg: "No URL updater installed; run sb setup first"}
+  }
+  let response = (^sudo /usr/bin/python3 -I /usr/local/libexec/sing-box-subscription.py pull --json | complete)
+  track-subscription $response
+}
+
+def track-subscription [response: record] {
+  if $response.exit_code != 0 {
+    print ($response.stderr | str trim)
+    error make {msg: "URL config update failed"}
+  }
+  let result = ($response.stdout | from json)
+  let state = ($env.HOME | path join ".local/state/sing-box")
+  # Bypass the shell's mkdir wrapper and allow an existing state directory.
+  ^mkdir -p $state
+  if $env.LAST_EXIT_CODE != 0 { error make {msg: "Could not create sing-box state directory"} }
+  chmod 700 $state
+  {source: "url", url: $result.url} | to json | save --force ($state | path join current.json)
+  chmod 600 ($state | path join current.json)
+  print $result.status
 }
 
 export def sb-apply [config?: string] {
@@ -181,14 +236,23 @@ export def install-sing-box-config [config: string, --restart] {
     error make {msg: "Generated sing-box configuration is invalid"}
   }
 
+  let current = ($env.HOME | path join ".local/state/sing-box/current.json")
+  if ($current | path exists) and ((open $current | get --optional source | default "") == "url") {
+    # Local apply must not be overwritten by the hourly URL updater.
+    ^sudo systemctl disable --now sing-box-update.timer
+    if $env.LAST_EXIT_CODE != 0 { error make {msg: "Could not disable URL updates before local apply"} }
+    ^sudo systemctl stop sing-box-update.service
+    if $env.LAST_EXIT_CODE != 0 { error make {msg: "Could not stop the URL updater before local apply"} }
+  }
   let installed = (^sudo install -D -o root -g sing-box -m 640 $merged /etc/sing-box/config.json | complete)
   if $installed.exit_code != 0 {
     print ($installed.stderr | str trim)
     error make {msg: "Could not install /etc/sing-box/config.json"}
   }
   let state_dir = ($env.HOME | path join ".local/state/sing-box")
-  mkdir $state_dir
-  {path: $private} | to json | save --force ($state_dir | path join "current.json")
+  ^mkdir -p $state_dir
+  if $env.LAST_EXIT_CODE != 0 { error make {msg: "Could not create sing-box state directory"} }
+  {source: "file", path: $private} | to json | save --force ($state_dir | path join "current.json")
   if $restart {
     ^sudo systemctl restart sing-box.service
     if $env.LAST_EXIT_CODE != 0 {

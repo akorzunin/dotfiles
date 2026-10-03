@@ -1,0 +1,10 @@
+[Unit]
+Description=Refresh sing-box config from its configured URL
+Wants=network-online.target
+After=network-online.target sing-box.service
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/python3 -I /usr/local/libexec/sing-box-subscription.py pull --automatic
+TimeoutStartSec=5min
+UMask=0077

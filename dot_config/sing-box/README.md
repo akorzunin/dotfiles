@@ -38,6 +38,51 @@ specific outbound dependencies must still pass `sing-box check`.
 Include the TLS/Reality and transport fields required by your provider.
 Protect private files with `chmod 600`; never commit credentials.
 
+## URL config with automatic updates
+
+For a provider that serves a **complete sing-box JSON config** over HTTPS:
+
+```nu
+sb setup    # prompts for URL, downloads now, enables hourly updates
+sb pull     # refresh manually, even while stopped
+sb current  # explicitly shows source: url and its URL
+```
+
+`sb setup` always asks for the URL with hidden input, keeping it out of shell
+history. Press Enter without a URL to cancel without changing anything.
+URL paths often contain credentials: do not commit them or share
+`sb current` output publicly. Settings are stored privately in
+`/var/lib/sing-box-subscription/source.json` and the user's source-tracking file.
+
+Setup requires sudo and installs a root-owned updater and systemd service/timer.
+The timer never executes writable repo scripts and requires no passwordless-sudo
+rule. Rerun `sb setup` after pulling changes to the updater itself.
+
+The URL config is used **in full**, without merging the shared desktop template.
+Only use a trusted provider: its config controls listeners, routing and outbounds.
+Downloads go directly, bypassing application proxy environment variables.
+Each download is validated with `sing-box check` before atomic replacement.
+Unchanged JSON does not trigger a restart; download/validation failures keep the
+working config. A failed restart restores the old config; the last replaced
+config is also retained privately as `previous.json` alongside `source.json`.
+This checks service startup, not VPN connectivity; use `sb test` for that.
+
+Updates run about hourly, starting five minutes after boot, while sing-box is
+running. `sb off` therefore pauses updates; `sb on` resumes them. Manual `sb pull`
+can start a stopped service. Restarting retains outbound selection when the
+provider enables sing-box's cache; selection is not forced to a different tag.
+
+```nu
+sudo systemctl status sing-box-update.timer --no-pager
+sudo journalctl -u sing-box-update.service -e --no-pager
+sudo systemctl disable --now sing-box-update.timer  # turn off automatic updates
+```
+
+`sb apply <local-file>` disables URL updates so they cannot overwrite that local
+config. `sb pull` switches back to the stored URL manually; run `sb setup` again
+if you also want to re-enable the timer. There is one machine-wide URL, not a
+separate subscription for each user or `sing-box@` instance.
+
 ## Install and use
 
 Install `sing-box` and `curl` first (`sudo pacman -S --needed sing-box curl`).
@@ -68,10 +113,12 @@ Press Tab after `sb ` for actions, after `sb apply ` for config files, and after
 requires the service to be running. Duplicate config names complete to full paths.
 The picker uses full paths too; canceling it leaves the service unchanged.
 
-`sb current` shows the last config installed by this user, even while stopped.
-Source tracking starts with the next installation via `sb apply` or setup;
-older installations show an unknown source. Changes made outside these commands
-are not tracked. The service state is not a VPN connectivity check; use `sb test`.
+`sb current` shows the last config installed by this user, even while stopped,
+including `source: file` and its path, or `source: url`, its URL and timer state.
+Source tracking starts with the next installation via `sb apply`, `sb setup`,
+`sb pull` or initial dotfiles setup; older installations show an unknown source.
+Changes made outside these commands (or setup by another user) are not tracked.
+The service state is not a VPN connectivity check; use `sb test`.
 
 `sb apply config1` also accepts the filename without `.json`. Config filenames
 and outbound tags are different: `sb apply nt1-ssh` loads `nt1-ssh.json`, while

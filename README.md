@@ -90,4 +90,8 @@ manually pushing. Run
 Install `sing-box` and `curl` separately if needed; setup does not install VPN tools.
 Put private VPN configs in `~/.local/share/*.json`, `~/.config/sing-box/*.json`.
 Use `sb list` to discover them and `sb apply <name-or-path>` to activate one.
-The local proxy uses port `12334`
+For a complete config served over HTTPS, `sb setup` prompts for its URL, downloads
+it and enables hourly automatic updates; `sb pull` refreshes manually. `sb current` explicitly
+shows whether the config came from a file or URL. See
+[sing-box usage and safety details](dot_config/sing-box/README.md).
+The shared desktop template's local proxy uses port `12334`

@@ -33,8 +33,8 @@ class SingBoxTest(unittest.TestCase):
             "type": "socks", "tag": "test-vpn", "server": "127.0.0.1", "server_port": 9999
         }]}))
 
-    def nu(self, command):
-        return subprocess.run(["nu", "--no-config-file", "-c", f'use "{MODULE}" *; $env.SB_CONFIG_DIRS = [($env.HOME | path join ".local/share") ($env.HOME | path join "Dropbox/env")]; {command}'],
+    def nu(self, command, prelude=""):
+        return subprocess.run(["nu", "--no-config-file", "-c", f'{prelude}; use "{MODULE}" *; $env.SB_CONFIG_DIRS = [($env.HOME | path join ".local/share") ($env.HOME | path join "Dropbox/env")]; {command}'],
                               env=self.env, text=True, capture_output=True)
 
     def mock_probe(self, proxies, fail=False):
@@ -86,6 +86,9 @@ class SingBoxTest(unittest.TestCase):
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertEqual(json.loads(result.stdout), {
             "name": "config1.json",
+            "source": "file",
+            "url": None,
+            "auto_updates": "disabled",
             "path": str(self.home / ".local/share/config1.json"),
             "installed_path": "/etc/sing-box/config.json",
             "service": "inactive",
@@ -98,10 +101,83 @@ class SingBoxTest(unittest.TestCase):
         result = self.nu('sb-current | to json')
         self.assertEqual(json.loads(result.stdout)["name"], "second.json")
 
+    def test_url_current_and_local_apply_disables_timer(self):
+        state = self.home / '.local/state/sing-box/current.json'
+        state.parent.mkdir(parents=True)
+        state.write_text(json.dumps({'source': 'url', 'url': 'https://example.invalid/linux.json'}))
+        systemctl = self.home / 'bin/systemctl'
+        systemctl.write_text('#!/bin/sh\necho enabled\n')
+        systemctl.chmod(0o755)
+        result = self.nu('sb-current | to json')
+        self.assertEqual(result.returncode, 0, result.stderr)
+        current = json.loads(result.stdout)
+        self.assertEqual(current['source'], 'url')
+        self.assertEqual(current['url'], 'https://example.invalid/linux.json')
+        self.assertIsNone(current['path'])
+        self.assertIn('hourly', current['auto_updates'])
+        result = self.nu('install-sing-box-config config1')
+        self.assertEqual(result.returncode, 0, result.stderr)
+        calls = (self.home / 'service-calls').read_text()
+        self.assertIn('disable --now sing-box-update.timer', calls)
+        self.assertIn('stop sing-box-update.service', calls)
+        result = self.nu('sb-current | to json')
+        self.assertEqual(json.loads(result.stdout)['source'], 'file')
+
+    def test_url_setup(self):
+        sudo = self.home / 'bin/sudo'
+        sudo.write_text('''#!/usr/bin/env python3
+import json, os, pathlib, sys
+home = pathlib.Path(os.environ['HOME'])
+with (home / 'service-calls').open('a') as log:
+    log.write(' '.join(sys.argv[1:]) + '\\n')
+if 'setup' in sys.argv:
+    url = json.load(sys.stdin)['url']
+    print(json.dumps({'source': 'url', 'url': url, 'status': 'Updated'}))
+''')
+        sudo.chmod(0o755)
+        state_dir = self.home / '.local/state/sing-box'
+        state_dir.mkdir(parents=True)
+        # Mirror the interactive config's mkdir wrapper; the module must bypass it.
+        prelude = '''
+def --env mkdir [...args: string] { error make {msg: "shell mkdir wrapper called"} }
+def input [--suppress-output, prompt: string] {
+    if not $suppress_output { error make {msg: "URL input must be hidden"} }
+    $prompt | save --append ($env.HOME | path join input-calls)
+    "https://example.invalid/linux.json"
+}
+'''
+        result = self.nu('sb-setup; sb-setup', prelude=prelude)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual((self.home / 'input-calls').read_text().count('Config URL: '), 2)
+        self.assertNotIn('https://example.invalid', result.stdout)
+        calls = (self.home / 'service-calls').read_text()
+        self.assertIn('enable --now sing-box-update.timer', calls)
+        self.assertIn('/usr/bin/python3 -I /usr/local/libexec/sing-box-subscription.py setup --json', calls)
+        state = self.home / '.local/state/sing-box/current.json'
+        self.assertEqual(json.loads(state.read_text())['source'], 'url')
+        self.assertEqual(state.stat().st_mode & 0o777, 0o600)
+        self.assertEqual(state.parent.stat().st_mode & 0o777, 0o700)
+
+    def test_setup_empty_input_cancels_without_sudo(self):
+        result = self.nu('sb-setup', prelude='def input [--suppress-output, prompt: string] { "  " }')
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertIn('Setup cancelled', result.stdout)
+        self.assertFalse((self.home / 'service-calls').exists())
+        self.assertFalse((self.home / '.local/state/sing-box/current.json').exists())
+
+    def test_local_apply_bypasses_mkdir_wrapper(self):
+        (self.home / '.local/state/sing-box').mkdir(parents=True)
+        result = self.nu('install-sing-box-config config1; install-sing-box-config config1',
+                         prelude='def --env mkdir [...args: string] { error make {msg: "shell mkdir wrapper called"} }')
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertTrue((self.home / '.local/state/sing-box/current.json').exists())
+
     def test_completions(self):
         result = self.nu('sb-actions | to json')
         self.assertIn("apply", json.loads(result.stdout))
         self.assertIn("current", json.loads(result.stdout))
+        self.assertIn("setup", json.loads(result.stdout))
+        self.assertIn("pull", json.loads(result.stdout))
         result = self.nu('sb-arguments "sb apply " | to json')
         self.assertEqual(json.loads(result.stdout)[0]["value"], "config1.json")
         self.profile("Dropbox/env/config1.json")

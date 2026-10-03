@@ -1,0 +1,10 @@
+[Unit]
+Description=Hourly sing-box URL config updates
+
+[Timer]
+OnBootSec=5min
+OnUnitInactiveSec=1h
+RandomizedDelaySec=1min
+
+[Install]
+WantedBy=timers.target
