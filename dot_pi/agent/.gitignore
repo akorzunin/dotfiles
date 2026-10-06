@@ -6,3 +6,6 @@ graveyard/
 sessions/
 bin/
 intercom/
+
+# Managed installation artifacts
+install/

@@ -1,5 +1,5 @@
 export def sb-actions [] {
-  [list configs current setup pull apply test on off enable disable restart status logs outbounds use select change]
+  [list configs current active setup pull apply test on off enable disable restart status logs outbounds use select change]
 }
 
 export def sb-arguments [context: string] {
@@ -11,13 +11,13 @@ export def sb-arguments [context: string] {
       {value: (if $duplicates > 1 { $file.path } else { $file.name }), description: $file.path}
     })
   }
-  if $action in [use select change test] {
+  if $action in [use select change test active] {
     # Completion must remain quiet and bounded when the service is stopped.
     return (try {
       let response = (^curl --fail --silent --noproxy "*" --max-time 1 http://127.0.0.1:9091/proxies | complete)
       if $response.exit_code != 0 { return [] }
       let proxies = ($response.stdout | from json | get proxies)
-      if $action == "test" {
+      if $action in [test active] {
         $proxies | columns
       } else {
         $proxies | get proxy.all
@@ -48,8 +48,8 @@ export def sb-current [] {
 }
 
 # Only the root-owned updater is executed by the system timer; repo code stays unprivileged.
-export def sb-setup [] {
-  let url = (input --suppress-output "Config URL: " | str trim)
+export def sb-setup [url?: string] {
+  let url = (if $url == null { input --suppress-output "Config URL: " } else { $url } | str trim)
   if $url == "" { print "Setup cancelled."; return }
   const files = (path self | path expand | path dirname | path dirname | path join sing-box)
   for item in [
@@ -111,8 +111,12 @@ export def sb-apply [config?: string] {
   sb-test --wait
 }
 
-# Test the outbound itself, so routing rules cannot silently bypass the VPN.
-export def sb-test [outbound: string = "proxy", --wait] {
+# A snapshot of group selection, not the route used by every connection.
+export def sb-active [outbound: string = "proxy"] {
+  resolve-active $outbound
+}
+
+def resolve-active [outbound: string, --wait] {
   let api = "http://127.0.0.1:9091"
   let retries = if $wait { [--retry 5 --retry-connrefused --retry-delay 1 --retry-max-time 5] } else { [] }
   let response = (^curl --fail-with-body --silent --show-error --noproxy "*" --max-time 5 ...$retries $"($api)/proxies" | complete)
@@ -131,13 +135,22 @@ export def sb-test [outbound: string = "proxy", --wait] {
     if $proxy == null {
       error make {msg: $"Unknown outbound: ($tag); see sb outbounds"}
     }
-    if ($proxy.type? | default "" | str lowercase) == "direct" or $tag == "direct" {
-      error make {msg: "Direct mode is selected, not a VPN; use sb use <VPN-tag> first"}
-    }
     let selected = ($proxy.now? | default "")
-    if $selected == "" { break }
+    if $selected == "" {
+      return {chain: ($visited | str join " → "), outbound: $tag, protocol: ($proxy.type? | default "unknown")}
+    }
     $tag = $selected
   }
+}
+
+# Test the outbound itself, so routing rules cannot silently bypass the VPN.
+export def sb-test [outbound: string = "proxy", --wait] {
+  let active = (resolve-active $outbound --wait=$wait)
+  let tag = $active.outbound
+  if ($active.protocol | str lowercase) == "direct" or $tag == "direct" {
+    error make {msg: "Direct mode is selected, not a VPN; use sb use <VPN-tag> first"}
+  }
+  let api = "http://127.0.0.1:9091"
   let target = "https://www.gstatic.com/generate_204"
   let encoded = ($tag | url encode --all)
   let result = (^curl --fail-with-body --silent --show-error --noproxy "*" --max-time 15 --get --data-urlencode $"url=($target)" --data-urlencode "timeout=10000" $"($api)/proxies/($encoded)/delay" | complete)

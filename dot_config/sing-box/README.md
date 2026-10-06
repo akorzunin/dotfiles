@@ -44,12 +44,14 @@ For a provider that serves a **complete sing-box JSON config** over HTTPS:
 
 ```nu
 sb setup    # prompts for URL, downloads now, enables hourly updates
+sb setup https://example.com/linux.json  # or pass the URL directly
 sb pull     # refresh manually, even while stopped
 sb current  # explicitly shows source: url and its URL
 ```
 
-`sb setup` always asks for the URL with hidden input, keeping it out of shell
-history. Press Enter without a URL to cancel without changing anything.
+Without an argument, `sb setup` asks for the URL with hidden input, keeping it
+out of shell history. Press Enter without a URL to cancel without changing anything.
+`sb setup <url>` skips the prompt, but the URL may be saved in shell history.
 URL paths often contain credentials: do not commit them or share
 `sb current` output publicly. Settings are stored privately in
 `/var/lib/sing-box-subscription/source.json` and the user's source-tracking file.
@@ -59,6 +61,7 @@ The timer never executes writable repo scripts and requires no passwordless-sudo
 rule. Rerun `sb setup` after pulling changes to the updater itself.
 
 The URL config is used **in full**, without merging the shared desktop template.
+Existing `urltest` groups and their automatic outbound switching are preserved.
 Only use a trusted provider: its config controls listeners, routing and outbounds.
 Downloads go directly, bypassing application proxy environment variables.
 Each download is validated with `sing-box check` before atomic replacement.
@@ -99,6 +102,8 @@ sb apply ~/.local/share/config2.json
 sb on                      # also enable startup at boot
 sb status
 sb current                 # config name, source path, installed path, service state
+sb active                  # selected group chain, outbound and protocol
+sb active auto             # inspect a differently named group
 sb test                    # HTTPS connectivity + latency via the selected VPN
 sb test vpn-nt1             # test a server without changing selection
 sb outbounds               # show live outbound selectors
@@ -109,7 +114,7 @@ sb off                     # stop and disable startup at boot
 ```
 
 Press Tab after `sb ` for actions, after `sb apply ` for config files, and after
-`sb use ` / `sb select ` / `sb test ` for live outbound tags. Outbound completion
+`sb use ` / `sb select ` / `sb test ` / `sb active ` for live outbound tags. Outbound completion
 requires the service to be running. Duplicate config names complete to full paths.
 The picker uses full paths too; canceling it leaves the service unchanged.
 
@@ -149,6 +154,20 @@ gsettings set org.gnome.system.proxy mode 'manual'
 ```bash
 gsettings set org.gnome.system.proxy mode 'none'
 ```
+
+## Active outbound and protocol
+
+`sb active [outbound-tag]` follows the current selection through nested selector
+and `urltest` groups and reports the final outbound's protocol (e.g. VLESS or
+Trojan), without a connectivity probe. It defaults to the `proxy` group; use
+`sb outbounds` to find tags if your provider uses another group name.
+Direct mode is displayed too. This is a snapshot of group selection, not a list
+of live connections: routing rules or existing connections can use other outbounds.
+The protocol field does not describe TLS/Reality or transport settings.
+
+Like `sb outbounds` and `sb test`, this requires the Clash API at
+`127.0.0.1:9091`. URL configs must enable it themselves; they are not modified
+to add it. `sb current` instead shows the installed config source, even offline.
 
 ## Check VPN connectivity
 

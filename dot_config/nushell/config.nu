@@ -116,10 +116,8 @@ def sb [
     "logs" => { ^journalctl -u sing-box.service -e --no-pager }
     "list" | "configs" => { sb-configs }
     "current" => { sb-current }
-    "setup" => {
-      if not ($outbound | is-empty) { error make {msg: "Usage: sb setup (enter the URL at the prompt)"} }
-      sb-setup
-    }
+    "active" => { sb-active ($outbound | default "proxy") }
+    "setup" => { sb-setup $outbound }
     "pull" => { sb-pull }
     "apply" => {
       if ($outbound | is-empty) { sb-apply } else { sb-apply $outbound }
@@ -156,7 +154,7 @@ def sb [
       print $"Selected ($outbound)"
     }
     _ => {
-      error make {msg: "Usage: sb [list|current|setup|pull|apply [name-or-path]|on|off|restart|status|logs|test [outbound-tag]|outbounds|use <outbound-tag>]"}
+      error make {msg: "Usage: sb [list|current|active [outbound-tag]|setup [url]|pull|apply [name-or-path]|on|off|restart|status|logs|test [outbound-tag]|outbounds|use <outbound-tag>]"}
     }
   }
 }

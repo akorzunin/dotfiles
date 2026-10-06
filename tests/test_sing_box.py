@@ -11,6 +11,9 @@ import unittest
 
 ROOT = Path(__file__).resolve().parents[1]
 MODULE = ROOT / "dot_config/nushell/sing-box.nu"
+# Exercise the actual dispatcher without loading unrelated shell config.
+DISPATCHER = 'def sb [' + (ROOT / 'dot_config/nushell/config.nu').read_text().split(
+    'def sb [', 1)[1].split('\nalias vpn = sb', 1)[0]
 
 
 class SingBoxTest(unittest.TestCase):
@@ -72,6 +75,43 @@ class SingBoxTest(unittest.TestCase):
         result = self.nu('sb-test missing')
         self.assertNotEqual(result.returncode, 0)
         self.assertIn("Unknown outbound", result.stderr)
+
+    def test_active_protocol(self):
+        self.mock_probe({
+            'proxy': {'type': 'Selector', 'now': 'auto'},
+            'auto': {'type': 'URLTest', 'now': 'vpn.vless'},
+            'vpn.vless': {'type': 'VLESS'},
+        })
+        result = self.nu(f'{DISPATCHER}; sb active | to json')
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(json.loads(result.stdout), {
+            'chain': 'proxy → auto → vpn.vless',
+            'outbound': 'vpn.vless', 'protocol': 'VLESS',
+        })
+        result = self.nu(f'{DISPATCHER}; sb active "vpn.vless" | to json')
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(json.loads(result.stdout)['chain'], 'vpn.vless')
+        self.mock_probe({'proxy': {'now': 'bypass'}, 'bypass': {'type': 'Direct'}})
+        result = self.nu('sb-active | to json')
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(json.loads(result.stdout)['protocol'], 'Direct')
+
+    def test_active_errors(self):
+        for proxies, error in [
+            ({'proxy': {'now': 'auto'}, 'auto': {'now': 'proxy'}}, 'cycle detected'),
+            ({'proxy': {'now': 'missing'}}, 'Unknown outbound: missing'),
+        ]:
+            with self.subTest(error=error):
+                self.mock_probe(proxies)
+                for command in ['sb-active', 'sb-test']:
+                    result = self.nu(command)
+                    self.assertNotEqual(result.returncode, 0)
+                    self.assertIn(error, result.stderr)
+        curl = self.home / 'bin/curl'
+        curl.write_text('#!/bin/sh\nexit 7\n')
+        result = self.nu('sb-active')
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn('Cannot reach the sing-box API', result.stderr)
 
     def test_current(self):
         systemctl = self.home / "bin/systemctl"
@@ -146,7 +186,7 @@ def input [--suppress-output, prompt: string] {
     "https://example.invalid/linux.json"
 }
 '''
-        result = self.nu('sb-setup; sb-setup', prelude=prelude)
+        result = self.nu(f'{DISPATCHER}; sb setup; sb setup', prelude=prelude)
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertEqual((self.home / 'input-calls').read_text().count('Config URL: '), 2)
         self.assertNotIn('https://example.invalid', result.stdout)
@@ -158,12 +198,23 @@ def input [--suppress-output, prompt: string] {
         self.assertEqual(state.stat().st_mode & 0o777, 0o600)
         self.assertEqual(state.parent.stat().st_mode & 0o777, 0o700)
 
+        prelude = 'def input [--suppress-output, prompt: string] { error make {msg: "Unexpected URL prompt"} }'
+        for argument in ['https://example.invalid/direct.json', '"  https://example.invalid/direct.json  "']:
+            with self.subTest(argument=argument):
+                result = self.nu(f'{DISPATCHER}; sb setup {argument}', prelude=prelude)
+                self.assertEqual(result.returncode, 0, result.stderr)
+                self.assertEqual(json.loads(state.read_text())['url'], 'https://example.invalid/direct.json')
+                self.assertNotIn('https://example.invalid', result.stdout)
+        self.assertNotIn('https://example.invalid', (self.home / 'service-calls').read_text())
+
     def test_setup_empty_input_cancels_without_sudo(self):
-        result = self.nu('sb-setup', prelude='def input [--suppress-output, prompt: string] { "  " }')
-        self.assertEqual(result.returncode, 0, result.stderr)
-        self.assertIn('Setup cancelled', result.stdout)
-        self.assertFalse((self.home / 'service-calls').exists())
-        self.assertFalse((self.home / '.local/state/sing-box/current.json').exists())
+        for command in ['sb-setup', 'sb-setup ""', 'sb-setup "  "']:
+            with self.subTest(command=command):
+                result = self.nu(command, prelude='def input [--suppress-output, prompt: string] { "  " }')
+                self.assertEqual(result.returncode, 0, result.stderr)
+                self.assertIn('Setup cancelled', result.stdout)
+                self.assertFalse((self.home / 'service-calls').exists())
+                self.assertFalse((self.home / '.local/state/sing-box/current.json').exists())
 
     def test_local_apply_bypasses_mkdir_wrapper(self):
         (self.home / '.local/state/sing-box').mkdir(parents=True)
@@ -176,6 +227,7 @@ def input [--suppress-output, prompt: string] {
         result = self.nu('sb-actions | to json')
         self.assertIn("apply", json.loads(result.stdout))
         self.assertIn("current", json.loads(result.stdout))
+        self.assertIn("active", json.loads(result.stdout))
         self.assertIn("setup", json.loads(result.stdout))
         self.assertIn("pull", json.loads(result.stdout))
         result = self.nu('sb-arguments "sb apply " | to json')
@@ -189,6 +241,8 @@ def input [--suppress-output, prompt: string] {
         self.mock_probe({"proxy": {"all": ["test vpn", "direct"]}, "test vpn": {"type": "Socks5"}})
         result = self.nu('sb-arguments "sb use " | to json')
         self.assertEqual(json.loads(result.stdout), ["test vpn", "direct"])
+        result = self.nu('sb-arguments "sb active " | to json')
+        self.assertEqual(json.loads(result.stdout), ["proxy", "test vpn"])
 
     def test_apply_runs_probe(self):
         proxies = {"proxy": {"now": "test vpn"}, "test vpn": {"type": "Socks5"}}
