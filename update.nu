@@ -29,6 +29,10 @@ let configs = [
   .config/sing-box/config-all-proxy.json
   .config/yazi/yazi.toml
   .config/yazi/theme.toml
+  .config/yazi/init.lua
+  .config/yazi/keymap.toml
+  .config/yazi/package.toml
+  .config/yazi/plugins/picker-escape.yazi/main.lua
   .config/nushell/config.nu
   .config/nushell/sing-box.nu
   .config/nushell/push-check.nu
@@ -51,6 +55,15 @@ for relative in ($configs | append $scripts) {
   ^python ./dot_local/bin/sync.py link $relative
   if $env.LAST_EXIT_CODE != 0 {
     error make {msg: $"Failed to link ($relative)"}
+  }
+}
+
+# Install the pinned Git plugin once; leave Yazi optional on minimal servers.
+let yazi_config = ($env.HOME | path join .config/yazi)
+if not (which ya | is-empty) and not ($yazi_config | path join plugins/git.yazi/main.lua | path exists) {
+  with-env {YAZI_CONFIG_HOME: $yazi_config} { ^ya pkg install }
+  if $env.LAST_EXIT_CODE != 0 {
+    error make {msg: "Yazi plugin installation failed; check Git/network access and rerun setup"}
   }
 }
 

@@ -59,6 +59,10 @@ class BootstrapTest(unittest.TestCase):
             self.run_nu(env, "--no-config-file", "update.nu")
             self.assertTrue((home / ".config/nushell/config.nu").is_symlink())
             self.assertTrue((home / ".config/nushell/sing-box.nu").is_symlink())
+            for relative in ("init.lua", "keymap.toml", "package.toml",
+                             "plugins/picker-escape.yazi/main.lua"):
+                self.assertEqual((home / ".config/yazi" / relative).resolve(),
+                                 ROOT / "dot_config/yazi" / relative)
             self.assertFalse((home / ".zoxide.nu").exists())
             self.assertFalse((home / ".cache/nushell/carapace.nu").exists())
             result = self.start_shell(home, env,
@@ -126,6 +130,24 @@ class BootstrapTest(unittest.TestCase):
             self.run_nu(env, "--no-config-file", "update.nu")
             self.assertEqual(zoxide.read_text(), "# custom zoxide init\n")
             self.assertEqual(carapace.read_text(), "# custom carapace init\n")
+
+    def test_yazi_plugin_installed_only_when_missing(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            home = Path(temporary)
+            env = self.server_env(home)
+            ya = home / "bin/ya"
+            ya.write_text(f"#!{sys.executable}\nimport os, pathlib, sys\n"
+                          "assert sys.argv[1:] == ['pkg', 'install']\n"
+                          "config = pathlib.Path(os.environ['YAZI_CONFIG_HOME'])\n"
+                          "assert (config / 'package.toml').is_symlink()\n"
+                          "plugin = config / 'plugins/git.yazi/main.lua'\n"
+                          "plugin.parent.mkdir(parents=True)\n"
+                          "plugin.write_text('-- installed')\n")
+            ya.chmod(0o755)
+            self.run_nu(env, "--no-config-file", "update.nu")
+            # The stub would fail on a second call because the directory exists.
+            self.run_nu(env, "--no-config-file", "update.nu")
+            self.assertTrue((home / ".config/yazi/plugins/git.yazi/main.lua").is_file())
 
     def test_deleted_init_files_do_not_break_startup(self):
         with tempfile.TemporaryDirectory() as temporary:

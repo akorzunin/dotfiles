@@ -6,3 +6,13 @@ sort_dir_first = true
 # Parent / current directory / preview: 10% / 30% / 60%.
 ratio = [1, 2, 3]
 linemode = "size"
+
+[[plugin.prepend_fetchers]]
+url = "*"
+run = "git"
+group = "git"
+
+[[plugin.prepend_fetchers]]
+url = "*/"
+run = "git"
+group = "git"

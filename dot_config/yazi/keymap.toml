@@ -1,0 +1,4 @@
+[[mgr.prepend_keymap]]
+on = "<Esc>"
+run = "plugin picker-escape"
+desc = "Cancel file picker, otherwise escape"

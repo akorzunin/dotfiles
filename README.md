@@ -45,6 +45,24 @@ checkout, or desktop packages are required on a server.
   local directory; `~/Dropbox` is the separate local mount/sync folder.
   For SSH browser authorization, see `dot_local/bin/dropbox-sync.md`.
 
+## Yazi
+
+All shared Yazi settings live in `dot_config/yazi`; Hyprconf owns only the desktop
+portal configuration that launches it. Setup also replaces old Hyprconf Yazi
+symlinks (confirm when prompted).
+
+When `ya` is installed, setup installs the pinned official Git plugin if missing
+(requires Git and network access on first install). After installing Yazi later,
+rerun setup. Restart Yazi to load changes.
+
+File sizes remain visible, with Git markers inside repositories:
+`M` modified/unstaged, `S` staged, `A` added, `D` deleted, `U` updated/conflicted,
+`?` untracked, `!` ignored. Clean files and non-repository files have no marker;
+directories reflect changes inside them.
+
+The same config supports the portal picker: Esc cancels and double-click submits
+a file only in chooser mode (`--chooser-file`); normal Yazi behavior is preserved.
+
 ## Forgotten Git pushes
 
 Run `push-check` in Nushell to check only immediate repositories/worktrees in

@@ -17,3 +17,12 @@ perm_exec = { fg = "#89dceb" }
 progress_label = { fg = "#cdd6f4", bold = true }
 progress_normal = { fg = "#a6e3a1", bg = "#1e293b" }
 progress_error = { fg = "#f9e2af", bg = "#7f1d1d" }
+
+[git]
+ignored_sign = "! "
+untracked_sign = "? "
+unstaged_sign = "M "
+staged_sign = "S "
+added_sign = "A "
+deleted_sign = "D "
+updated_sign = "U "
