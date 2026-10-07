@@ -77,6 +77,7 @@ $env.PATH = ($env.PATH | append '~/.local/bin')
 $env.PATH = ($env.PATH | append '~/.npm-global/bin')
 $env.PATH = ($env.PATH | append '~/go/bin')
 $env.PATH = ($env.PATH | append '~/.local/share/pnpm')
+$env.PATH = ($env.PATH | append '~/.pi/agent/bin')
 if not (which oh-my-posh | is-empty) {
   oh-my-posh init nu --config ~/.config/oh-my-posh/base.yaml
 }
@@ -509,4 +510,5 @@ def rgv [query: string = ""] {
    let match = ($result.stdout | str trim --right | split row ':')
    nvim $"+($match | get 1)" -- ($match | first)
 }
-alias or = openrgb --noautoconnect --device "MSI MAG B650M" --mode Static --brightness 15 --color 00FFFF
+# MSI hardware brightness is ineffective on these lights; scale cyan to 15% instead.
+alias or = openrgb --noautoconnect --device "MSI MAG B650M" --mode Static --brightness 100 --color 002626
