@@ -102,6 +102,7 @@ alias nc = config nu
 const config_dir = (path self | path expand | path dirname)
 use ($config_dir | path join sing-box.nu) *
 use ($config_dir | path join push-check.nu)
+use ($config_dir | path join dropbox-sync-completions.nu) *
 
 # Config discovery works without a running service; outbound selection uses its API.
 def sb [

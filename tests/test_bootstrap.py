@@ -59,6 +59,7 @@ class BootstrapTest(unittest.TestCase):
             self.run_nu(env, "--no-config-file", "update.nu")
             self.assertTrue((home / ".config/nushell/config.nu").is_symlink())
             self.assertTrue((home / ".config/nushell/sing-box.nu").is_symlink())
+            self.assertTrue((home / ".config/nushell/dropbox-sync-completions.nu").is_symlink())
             for relative in ("init.lua", "keymap.toml", "package.toml",
                              "plugins/picker-escape.yazi/main.lua"):
                 self.assertEqual((home / ".config/yazi" / relative).resolve(),
@@ -82,10 +83,11 @@ class BootstrapTest(unittest.TestCase):
             (config_dir / "config.nu").symlink_to(ROOT / "dot_config/nushell/config.nu")
             # Simulate a pull introducing modules not yet linked by update.nu.
             result = self.start_shell(home, env,
-                                      'help sb | ignore; help push-check | ignore; print "STARTUP_OK"')
+                                      'help sb | ignore; help push-check | ignore; help dropbox-sync | ignore; print "STARTUP_OK"')
             self.assertIn("STARTUP_OK", result.stdout)
             self.assertFalse((config_dir / "push-check.nu").exists())
             self.assertFalse((config_dir / "sing-box.nu").exists())
+            self.assertFalse((config_dir / "dropbox-sync-completions.nu").exists())
 
     def test_missing_python_installs_only_python(self):
         with tempfile.TemporaryDirectory() as temporary:

@@ -1,7 +1,19 @@
 # Dropbox local sync
 
 Requires Nushell, rclone (with bisync `--recover` support), and `flock`.
-Scheduling requires a running systemd user manager.
+Scheduling and `--check` require a running systemd user manager.
+Mount mode and its `--unmount`, `--force`, and `--tray` commands have been removed.
+
+## Nushell completions
+
+The dotfiles Nushell config loads native completions for all flags and suggested
+`--schedule` intervals (custom intervals still work). No Carapace is needed.
+Restart Nushell after updating, then type `dropbox-sync --` and press Tab.
+For the current shell, load them with:
+
+```nu
+use /path/to/dotfiles/dot_config/nushell/dropbox-sync-completions.nu *
+```
 
 ## First-time connection
 
@@ -9,7 +21,7 @@ Run `dropbox-sync --setup`. In rclone's menu choose `n` (New remote),
 use `dropbox` for the remote name, and choose **Dropbox** for **Storage**
 (type `dropbox` or select its listed number). Follow the browser authorization,
 confirm the remote, and quit. The remote name is not a local path:
-`~/Dropbox` is the separate folder this script mounts or syncs. If you already
+`~/Dropbox` is the separate local folder this script syncs. If you already
 have exactly one Dropbox remote under another name, the script uses it too.
 
 Over SSH with no browser on the VM, answer `n` to rclone's browser-auth
@@ -20,14 +32,10 @@ SSH session from your computer with `ssh -L 53682:localhost:53682 archlinux`,
 answer `y` to browser auth, and open the printed `127.0.0.1:53682` URL in
 your computer's browser. The port forward must be active throughout auth.
 
-## Move from the mount
-
-Close applications and terminals using Dropbox, then run
-`dropbox-sync --unmount` (or `-u`). It refuses to unmount while uploads are
-queued/active or the cache reports errors. If refused, run `--check` and resolve
-the issue before retrying. Do not force-unmount pending uploads. All local transfers refuse a mounted folder.
-No-argument invocation still mounts, but refuses nonempty or bisync-initialized
-local folders. `--check`, `--force`, and `--tray` remain mount-only operations.
+Setup only configures the connection: it does not sync or enable autosync.
+`--init` requires `--sync`; `--setup --init` is not valid. Follow the two-way
+synchronization steps below to initialize, then enable the schedule.
+All local transfers still refuse a mounted folder as a safety precaution.
 
 ## Explicit transfers
 
@@ -83,17 +91,29 @@ commands: the desktop-client files are now excluded. If the error persists,
 inspect rclone's verbose output for another rejected path rather than repeatedly
 retrying.
 
+## Autosync status
+
 ```
-systemctl --user status dropbox-sync.timer dropbox-sync.service
-journalctl --user -u dropbox-sync.service
-dropbox-sync --unschedule
+dropbox-sync --check        # or -c; no arguments also shows status
+journalctl --user -u dropbox-sync.service -n 50 --no-pager
+journalctl --user -u dropbox-sync.service -f  # follow live logs
+dropbox-sync --unschedule  # disable autosync and stop any running transfer
 ```
+
+`--check` reports initialization, whether the timer is active and enabled for
+future user-manager startups, whether a sync is running, and the last scheduled
+sync's result/exit code. The timer table shows the next and previous triggers.
+An inactive service between runs is normal; `Last result: success (exit 0)`
+indicates the last scheduled transfer succeeded. `Autosync: ON` means the timer
+is active, not that transfers are necessarily succeeding: check the last result
+and logs. Status does not perform a sync or contact Dropbox, and does not need
+rclone installed. Manual `--sync` output is not recorded in the service's status.
 
 Scheduling uses the current script's absolute path; rerun `--schedule` if it moves.
 The timer normally runs only while your user manager is running (enable user
 lingering separately if needed). Stop the schedule before changing rclone remotes.
 
-Polling is not instantaneous: remote changes can take multiple polling intervals
+Scheduled sync is not instantaneous: remote changes can take multiple sync intervals
 to reach another machine. Sync after closing an application and before opening
 it on another device. Do not sync live databases/WAL files or concurrently written
 application state; use application-native export/sync instead. Files remain

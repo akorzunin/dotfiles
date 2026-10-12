@@ -36,6 +36,7 @@ let configs = [
   .config/nushell/config.nu
   .config/nushell/sing-box.nu
   .config/nushell/push-check.nu
+  .config/nushell/dropbox-sync-completions.nu
   .config/lazygit/config.yml
   .config/oh-my-posh/base.yaml
   .config/opencode/opencode.jsonc

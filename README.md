@@ -42,8 +42,9 @@ checkout, or desktop packages are required on a server.
   `update.nu` directly.
 - `dropbox-sync --setup`: create an rclone remote named `dropbox` with
   **Storage** set to **Dropbox**. The name identifies the connection, not a
-  local directory; `~/Dropbox` is the separate local mount/sync folder.
-  For SSH browser authorization, see `dot_local/bin/dropbox-sync.md`.
+  local directory; `~/Dropbox` is the separate local sync folder.
+  After initialization, use `--schedule 30s` for autosync and `--check` for status.
+  For setup and SSH browser authorization, see `dot_local/bin/dropbox-sync.md`.
 
 ## Yazi
 
