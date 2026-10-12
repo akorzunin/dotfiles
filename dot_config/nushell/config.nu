@@ -1,5 +1,5 @@
 def ll [a: path = "."] {
-  ls --long $a | select name type size modified mode user group
+  ls --long --all $a | select name type size modified mode user group
 }
 alias - = cd -
 alias l = lazygit
