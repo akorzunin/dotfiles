@@ -1,5 +1,10 @@
 # Pi model presets
 
+`pi-mode` uses automatic completion notifications with sound, without a
+model-callable notification tool or notification skills. See
+[`extensions/notify-auto/README.md`](extensions/notify-auto/README.md) for setup
+and settings commands.
+
 Configure Luna Max and Sol High as the two models cycled by `Ctrl+P`:
 
 ```bash

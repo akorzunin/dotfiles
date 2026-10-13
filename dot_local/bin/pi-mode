@@ -4,7 +4,7 @@ let always_extensions = [
     ($nu.home-dir | path join ".pi/agent/extensions/notify-sound.ts")
     "npm:pi-web-access@^0.38.0"
     "npm:@juicesharp/rpiv-ask-user-question@^2.13.2"
-    "npm:@pi-unipi/notify@^2.20.5"
+    ($nu.home-dir | path join ".pi/agent/extensions/notify-auto")
     "npm:pi-codex-limit@^1.8.2"
 ]
 
