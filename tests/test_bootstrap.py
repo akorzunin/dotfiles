@@ -133,6 +133,33 @@ class BootstrapTest(unittest.TestCase):
             self.assertEqual(zoxide.read_text(), "# custom zoxide init\n")
             self.assertEqual(carapace.read_text(), "# custom carapace init\n")
 
+    def test_carapace_positional_input_is_migrated(self):
+        legacy = ('let carapace_completer = {|spans| $spans }\n'
+                  '$env.config.completions.external.completer = $carapace_completer\n')
+        with tempfile.TemporaryDirectory() as temporary:
+            home = Path(temporary)
+            env = self.server_env(home)
+            self.install_optional_stubs(home)
+            stub = home / "bin/carapace"
+            stub.write_text(f"#!{sys.executable}\nimport sys\nsys.stdout.write({legacy!r})\n")
+            self.run_nu(env, "--no-config-file", "update.nu")
+            cache = home / ".cache/nushell/carapace.nu"
+            migrated = cache.read_text()
+            self.assertIn("{|place|", migrated)
+            self.assertIn("let spans = $place.command", migrated)
+            result = self.start_shell(
+                home, env,
+                'c; do $env.config.completions.external.completer '
+                '{command: [git status]} | to json --raw')
+            self.assertIn('["git","status"]', result.stdout)
+            # An already-generated cache is patched even if Carapace is absent.
+            stub.unlink()
+            cache.write_text("# custom settings\n" + legacy)
+            self.run_nu(env, "--no-config-file", "update.nu")
+            self.assertEqual(cache.read_text(), "# custom settings\n" + migrated)
+            self.run_nu(env, "--no-config-file", "update.nu")
+            self.assertEqual(cache.read_text(), "# custom settings\n" + migrated)
+
     def test_yazi_plugin_installed_only_when_missing(self):
         with tempfile.TemporaryDirectory() as temporary:
             home = Path(temporary)

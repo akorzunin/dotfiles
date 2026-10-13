@@ -21,6 +21,17 @@ if not (which carapace | is-empty) and not ($carapace | path exists) {
   if $generated.exit_code != 0 { error make {msg: "carapace initialization failed"} }
   $generated.stdout | save --force $carapace
 }
+# Carapace 1.7.1 still emits positional input; Nu now binds named completion fields.
+# Patch only the known generated closure, preserving the rest of an existing cache.
+if ($carapace | path exists) {
+  let init = (open --raw $carapace)
+  let migrated = ($init | str replace 'let carapace_completer = {|spans|' 'let carapace_completer = {|place|
+  let spans = $place.command
+')
+  if $migrated != $init {
+    $migrated | save --force $carapace
+  }
+}
 
 use dot_config/nushell/sing-box.nu *
 
