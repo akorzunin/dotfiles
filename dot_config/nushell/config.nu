@@ -9,23 +9,15 @@ alias f = fzf
 alias y = yazi
 def cl [] { clear; reset }
 alias py = python
-alias p = python
 alias h = htop
 # List processes by resident memory usage
 def memtop [count: int = 10] {
   ps -l
-  | sort-by mem
+  | sort-by mem -r
   | where name != nu
   | first $count
   | select pid name cpu mem command
-}
-# List processes by sampled CPU usage
-def cputop [count: int = 10] {
-  ps -l
-  | sort-by cpu
-  | where name != nu
-  | first $count
-  | select pid name cpu mem command
+  | reverse
 }
 # Select a process with fzf and terminate it (Esc cancels).
 def fkill [] {
@@ -44,28 +36,12 @@ def fkill [] {
 }
 alias fk = fkill
 alias o = xdg-open
-alias oh = with-env { http_proxy: "localhost:12334" https_proxy: "localhost:12334" } { opencode }
-alias he = hyprctl dispatch exit
-def hc [] {
-  hyprctl clients -j |
-  from json |
-  select pid class initialClass title initialTitle xwayland pinned size floating fullscreen fullscreenClient |
-  to json |
-  jq
-}
 def batt [] {
   upower -i /org/freedesktop/UPower/devices/battery_BAT0
   | grep -E "state|to full|percentage"
 }
 alias battery = batt
 alias b = batt
-def hm [] {
-  hyprctl monitors all -j |
-  from json |
-  select id name description width height refreshRate |
-  to json |
-  jq
-}
 alias lsgpu = lspci -d ::03xx
 
 $env.EDITOR = "nvim"
@@ -86,15 +62,7 @@ def --env z [dir: directory = "~"] { cd $dir }
 source (if ("~/.zoxide.nu" | path exists) { "~/.zoxide.nu" } else { null })
 alias cd = z
 alias dt = zsh -c date
-
-alias nhh = nvim ~/.config/hypr/hyprland.conf
-alias nhm = nvim ~/.config/hypr/monitors.conf
-alias nhr = nvim ~/.config/hypr/windowrules.conf
-alias nhw = nvim ~/.config/hypr/windowrules.conf
-alias nhs = nvim ~/.config/hypr/startup.conf
-alias nhb = nvim ~/.config/hypr/binds.conf
 alias nn = nvim ~/.config/niri/config.kdl
-
 alias nc = config nu
 
 # Resolve the config symlink before importing siblings: git pulls can add modules
@@ -160,10 +128,6 @@ def sb [
     }
   }
 }
-alias vpn = sb
-alias vpn-on = sb on
-alias vpn-off = sb off
-
 $env.ANI_CLI_HIST_DIR = $env.HOME + "/Dropbox/ani-cli"
 $env.BAT_STYLE = "plain"
 $env.BAT_THEME = "ansi"
@@ -181,21 +145,10 @@ def pf [] {
 }
 alias sus = systemctl suspend
 alias rb = reboot
-alias sv = sudo v2raya
 alias ts = sudo timeshift-gtk
 # create system backup
 alias tsb = sudo timeshift --create --comments "Before system update" --tags O
 alias record-selection = zsh -c 'wf-recorder -g "$(slurp)" -f a.mp4'
-# TODO: make code less cringe
-def screenshot [
-  --delay (-d)
-] {
-  if ($delay) {
-    zsh -c 'grim -g "$(slurp -d; sleep 10; notify-send Screenshot-saved)" - | wl-copy'
-  } else {
-    zsh -c 'grim -g "$(slurp -d; hyprctl dispatch movecursortocorner 1 > /dev/null)" - | wl-copy'
-  }
-}
 alias gp = git pull
 alias gpr = git pull --rebase
 alias gf = git fetch
@@ -284,7 +237,7 @@ def desktop-sync [
 }
 
 def ff-compress [file: path, out?: string, --crf (-c): int = 23] {
-  print $"Compressing ($file) to ($out | default $"($file).out.mp4")"
+  print $"Compressing ($file) to ($out | default $'($file).out.mp4')"
   ffpb -i $file -vcodec libx264 -crf $crf ($out | default $"($file).out.mp4")
 }
 
@@ -513,3 +466,5 @@ def rgv [query: string = ""] {
 }
 # MSI hardware brightness is ineffective on these lights; scale cyan to 15% instead.
 alias or = openrgb --noautoconnect --device "MSI MAG B650M" --mode Static --brightness 100 --color 002626
+$env.config.max_last_result_size = 100mb
+$env.config.abbreviations = ($env.config.abbreviations | upsert '_' '$ans.last')
