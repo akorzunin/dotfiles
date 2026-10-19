@@ -1,0 +1,11 @@
+{
+  "name": "pi-notify-auto",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "keywords": ["pi-package"],
+  "pi": { "extensions": ["./index.ts"], "skills": [] },
+  "scripts": { "test": "tsx --test test/*.test.ts" },
+  "dependencies": { "@pi-unipi/notify": "2.2.1" },
+  "devDependencies": { "tsx": "^4.20.0" }
+}
