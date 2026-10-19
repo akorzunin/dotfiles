@@ -6,6 +6,11 @@ gui:
       - cyan
 promptToReturnFromSubprocess: false
 os:
+  # Keep Lazygit receiving mouse releases when a diff link opens Neovim.
+  edit: 'kitty --detach nvim -- {{filename}}'
+  editAtLine: 'kitty --detach nvim +{{line}} -- {{filename}}'
+  openDirInEditor: 'kitty --detach nvim -- {{dir}}'
+  editInTerminal: false
   open: 'kitty --detach nvim "{{filename}}"'
 git:
   diffRenderers:

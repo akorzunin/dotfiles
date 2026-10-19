@@ -1,10 +1,6 @@
 {
   "$schema": "https://opencode.ai/config.json",
-  "plugin": [
-    "@mohak34/opencode-notifier@v0.2.5",
-    "/home/korzuninav/Documents/ponytail/.opencode/plugins/ponytail.mjs",
-    "noti",
-  ],
+  "plugin": [],
   "command": {
     "commit": {
       "description": "Review staged changes, create commit message, ask for confirmation before committing",
