@@ -2,8 +2,8 @@ export def sb-actions [] {
   [list configs current active setup pull apply test on off enable disable restart status logs outbounds use select change]
 }
 
-export def sb-arguments [context: string] {
-  let action = ($context | str trim --left | split row --regex '\s+' | get --optional 1 | default "")
+export def sb-arguments [buffer: string] {
+  let action = ($buffer | str trim --left | split row --regex '\s+' | get --optional 1 | default "")
   if $action == "apply" {
     let configs = (sb-configs)
     return ($configs | each {|file|
