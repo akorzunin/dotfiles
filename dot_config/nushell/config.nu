@@ -448,7 +448,7 @@ def rgv [query: string = ""] {
    let search = 'sleep 0.1; [ -n {q} ] && rg --smart-case --line-number --no-heading --color=never -- {q} . || true'
    let result = (with-env { SHELL: /bin/sh } {
        let args = [
-           --disabled --query $query --prompt 'Search> '
+           --disabled --no-sort --layout=reverse-list --query $query --prompt 'Search> '
            --bind $'start:reload:($search)'
            --bind $'change:reload:($search)'
            --delimiter ':'
