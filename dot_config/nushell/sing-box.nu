@@ -1,5 +1,5 @@
 export def sb-actions [] {
-  [list configs current active setup pull apply test on off enable disable restart status logs outbounds use select change]
+  [list configs current active setup pull apply test test-all on off enable disable restart status logs outbounds use select change]
 }
 
 export def sb-arguments [buffer: string] {
@@ -116,14 +116,18 @@ export def sb-active [outbound: string = "proxy"] {
   resolve-active $outbound
 }
 
-def resolve-active [outbound: string, --wait] {
+def get-proxies [--wait] {
   let api = "http://127.0.0.1:9091"
   let retries = if $wait { [--retry 5 --retry-connrefused --retry-delay 1 --retry-max-time 5] } else { [] }
   let response = (^curl --fail-with-body --silent --show-error --noproxy "*" --max-time 5 ...$retries $"($api)/proxies" | complete)
   if $response.exit_code != 0 {
     error make {msg: "Cannot reach the sing-box API; run sb status or sb on"}
   }
-  let proxies = ($response.stdout | from json | get proxies)
+  $response.stdout | from json | get proxies
+}
+
+def resolve-active [outbound: string, --wait] {
+  let proxies = (get-proxies --wait=$wait)
   mut tag = $outbound
   mut visited = []
   loop {
@@ -150,10 +154,30 @@ export def sb-test [outbound: string = "proxy", --wait] {
   if ($active.protocol | str lowercase) == "direct" or $tag == "direct" {
     error make {msg: "Direct mode is selected, not a VPN; use sb use <VPN-tag> first"}
   }
+  probe-outbound $tag
+}
+
+# Probe concrete VPN outbounds once each, without changing any selector.
+export def sb-test-all [] {
+  get-proxies | transpose outbound details | where {|item|
+    let kind = ($item.details.type? | default "" | str lowercase)
+    # The workstation transport only permits SSH destinations, not HTTPS probes.
+    ($item.outbound not-in [direct workstation-hop] and $kind not-in [direct reject block dns selector urltest]
+      and $item.details.all? == null and $item.details.now? == null)
+  } | par-each --threads 4 {|item|
+    try {
+      probe-outbound $item.outbound | select outbound status latency_ms
+    } catch {
+      {outbound: $item.outbound, status: "failed or timed out", latency_ms: null}
+    }
+  } | sort-by outbound
+}
+
+def probe-outbound [tag: string] {
   let api = "http://127.0.0.1:9091"
   let target = "https://www.gstatic.com/generate_204"
   let encoded = ($tag | url encode --all)
-  let result = (^curl --fail-with-body --silent --show-error --noproxy "*" --max-time 15 --get --data-urlencode $"url=($target)" --data-urlencode "timeout=10000" $"($api)/proxies/($encoded)/delay" | complete)
+  let result = (^curl --fail-with-body --silent --show-error --noproxy "*" --max-time 35 --get --data-urlencode $"url=($target)" --data-urlencode "timeout=30000" $"($api)/proxies/($encoded)/delay" | complete)
   if $result.exit_code != 0 {
     error make {msg: $"VPN check failed for ($tag): HTTPS probe failed or timed out. The server or test site may be unavailable; see sb logs."}
   }

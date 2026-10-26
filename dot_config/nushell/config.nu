@@ -93,6 +93,7 @@ def sb [
       if ($outbound | is-empty) { sb-apply } else { sb-apply $outbound }
     }
     "test" => { sb-test ($outbound | default "proxy") }
+    "test-all" => { sb-test-all }
     "outbounds" => {
       let response = (^curl --fail-with-body --silent --show-error --noproxy "*" $"($api)/proxies" | complete)
       if $response.exit_code != 0 {
@@ -124,7 +125,7 @@ def sb [
       print $"Selected ($outbound)"
     }
     _ => {
-      error make {msg: "Usage: sb [list|current|active [outbound-tag]|setup [url]|pull|apply [name-or-path]|on|off|restart|status|logs|test [outbound-tag]|outbounds|use <outbound-tag>]"}
+      error make {msg: "Usage: sb [list|current|active [outbound-tag]|setup [url]|pull|apply [name-or-path]|on|off|restart|status|logs|test [outbound-tag]|test-all|outbounds|use <outbound-tag>]"}
     }
   }
 }

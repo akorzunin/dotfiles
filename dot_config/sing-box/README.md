@@ -106,6 +106,7 @@ sb active                  # selected group chain, outbound and protocol
 sb active auto             # inspect a differently named group
 sb test                    # HTTPS connectivity + latency via the selected VPN
 sb test vpn-nt1             # test a server without changing selection
+sb test-all                 # test every VPN outbound, keeping failed results
 sb outbounds               # show live outbound selectors
 sb use vpn-nt1             # select an outbound without restarting
 sb use direct
@@ -174,8 +175,16 @@ to add it. `sb current` instead shows the installed config source, even offline.
 `sb test` resolves the current selector and uses sing-box's Clash API to make
 an HTTPS probe to `https://www.gstatic.com/generate_204` through that outbound.
 It reports the outbound and latency in milliseconds, or returns an error on
-failure (10-second probe timeout). Direct mode is rejected, so a working direct
+failure (30-second probe timeout, with a 35-second HTTP request limit). Direct mode is rejected, so a working direct
 connection is not reported as a working VPN. No selector changes are made.
+
+`sb test-all` tests every concrete VPN outbound advertised by the API, with up
+to four probes in parallel. It returns a table of outbound, status and latency;
+failed or timed-out probes stay in the table with an empty latency. Selector
+and URL-test groups, direct, reject/block and DNS outbounds are skipped, as is
+`workstation-hop`: that intermediate transport only allows SSH destinations.
+The complete `ssh-via-workstation` and `cherry-ssh-via-workstation` exits are still
+tested. It uses the same timeouts as `sb test` and does not change the selected outbound.
 
 This checks outbound connectivity, not just whether the service is running.
 It does not test app proxy settings or the local port 12334 listener. A failure

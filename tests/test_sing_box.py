@@ -13,7 +13,7 @@ ROOT = Path(__file__).resolve().parents[1]
 MODULE = ROOT / "dot_config/nushell/sing-box.nu"
 # Exercise the actual dispatcher without loading unrelated shell config.
 DISPATCHER = 'def sb [' + (ROOT / 'dot_config/nushell/config.nu').read_text().split(
-    'def sb [', 1)[1].split('\nalias vpn = sb', 1)[0]
+    'def sb [', 1)[1].split('\n}', 1)[0] + '\n}'
 
 
 class SingBoxTest(unittest.TestCase):
@@ -49,7 +49,7 @@ class SingBoxTest(unittest.TestCase):
             ' print(json.dumps({"proxies": proxies}))\n'
             'else:\n'
             ' assert sys.argv[-1].endswith("/test%20vpn/delay"), sys.argv\n'
-            ' assert "--max-time" in sys.argv and "timeout=10000" in sys.argv\n'
+            ' assert sys.argv[sys.argv.index("--max-time") + 1] == "35" and "timeout=30000" in sys.argv\n'
             + (' sys.exit(22)\n' if fail else ' print(json.dumps({"delay": 123}))\n')
         )
         curl.chmod(0o755)
@@ -66,6 +66,64 @@ class SingBoxTest(unittest.TestCase):
         result = self.nu('sb-test')
         self.assertNotEqual(result.returncode, 0)
         self.assertIn("VPN check failed", result.stderr)
+
+    def test_all_probes_continue_after_failures(self):
+        proxies = {
+            'proxy': {'type': 'Selector', 'now': 'good vpn', 'all': ['good vpn', 'timeout']},
+            'auto': {'type': 'URLTest', 'now': 'good vpn'},
+            'bypass': {'type': 'Direct'},
+            'reject': {'type': 'Reject'},
+            'block': {'type': 'Block'},
+            'dns': {'type': 'DNS'},
+            'good vpn': {'type': 'Socks5'},
+            'workstation-hop': {'type': 'SSH'},
+            'ssh-via-workstation': {'type': 'SSH'},
+            'cherry-ssh-via-workstation': {'type': 'SSH'},
+            'timeout': {'type': 'VLESS'},
+            'failed': {'type': 'Trojan'},
+            'malformed': {'type': 'Shadowsocks'},
+        }
+        curl = self.home / 'bin/curl'
+        curl.write_text(
+            '#!/usr/bin/env python3\nimport json, os, sys\nfrom urllib.parse import unquote\n'
+            f'proxies = {proxies!r}\n'
+            'if sys.argv[-1].endswith("/proxies"):\n'
+            ' print(json.dumps({"proxies": proxies}))\n'
+            'else:\n'
+            ' assert sys.argv[sys.argv.index("--max-time") + 1] == "35" and "timeout=30000" in sys.argv\n'
+            ' assert "--request" not in sys.argv\n'
+            ' tag = unquote(sys.argv[-1].split("/")[-2])\n'
+            ' with open(os.path.join(os.environ["HOME"], "probe-calls"), "a") as log:\n'
+            '  log.write(tag + "\\n")\n'
+            ' if tag == "timeout": sys.exit(28)\n'
+            ' if tag == "failed": sys.exit(22)\n'
+            ' print("not json" if tag == "malformed" else json.dumps({"delay": 123}))\n'
+        )
+        curl.chmod(0o755)
+        result = self.nu(f'{DISPATCHER}; sb test-all | to json')
+        self.assertEqual(result.returncode, 0, result.stderr)
+        rows = json.loads(result.stdout)
+        expected = ['cherry-ssh-via-workstation', 'failed', 'good vpn', 'malformed', 'ssh-via-workstation', 'timeout']
+        self.assertEqual([row['outbound'] for row in rows], expected)
+        for row in rows:
+            if row['outbound'] in ['good vpn', 'ssh-via-workstation', 'cherry-ssh-via-workstation']:
+                self.assertEqual(row['status'], 'HTTPS probe passed')
+                self.assertEqual(row['latency_ms'], 123)
+            else:
+                self.assertEqual(row['status'], 'failed or timed out')
+                self.assertIsNone(row['latency_ms'])
+        self.assertCountEqual((self.home / 'probe-calls').read_text().splitlines(), expected)
+
+    def test_all_empty_and_api_unavailable(self):
+        self.mock_probe({'proxy': {'type': 'Selector'}, 'bypass': {'type': 'Direct'}})
+        result = self.nu('sb-test-all | to json')
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(json.loads(result.stdout), [])
+        curl = self.home / 'bin/curl'
+        curl.write_text('#!/bin/sh\nexit 7\n')
+        result = self.nu('sb-test-all')
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn('Cannot reach the sing-box API', result.stderr)
 
     def test_probe_rejects_direct_and_unknown(self):
         self.mock_probe({"proxy": {"now": "bypass"}, "bypass": {"type": "Direct"}})
@@ -230,6 +288,7 @@ def input [--suppress-output, prompt: string] {
         self.assertIn("active", json.loads(result.stdout))
         self.assertIn("setup", json.loads(result.stdout))
         self.assertIn("pull", json.loads(result.stdout))
+        self.assertIn("test-all", json.loads(result.stdout))
         result = self.nu('sb-arguments "sb apply " | to json')
         self.assertEqual(json.loads(result.stdout)[0]["value"], "config1.json")
         self.profile("Dropbox/env/config1.json")
