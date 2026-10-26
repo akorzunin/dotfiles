@@ -466,6 +466,6 @@ def rgv [query: string = ""] {
    nvim $"+($match | get 1)" -- ($match | first)
 }
 # MSI hardware brightness is ineffective on these lights; scale cyan to 15% instead.
-alias or = openrgb --noautoconnect --device "MSI MAG B650M" --mode Static --brightness 100 --color 002626
+alias or = openrgb --noautoconnect --device "MSI MAG B650M" --mode Static --brightness 10 --color 002626
 $env.config.max_last_result_size = 100mb
 $env.config.abbreviations = ($env.config.abbreviations | upsert '_' '$ans.last')
