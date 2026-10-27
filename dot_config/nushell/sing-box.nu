@@ -147,30 +147,141 @@ def resolve-active [outbound: string, --wait] {
   }
 }
 
+export def sb-test-modes [] { [quick udp bandwidth stability full] }
+
+# Format only the view, never replace the returned records ($ans.last and pipes).
+# The REPL collects results before this hook; live reports already went to stderr.
+export def sb-display [] {
+  metadata access {|meta|
+    if ($meta.sb_test_displayed? | default false) {
+      ignore
+    } else if ($meta.sb_test? | default false) {
+      each {|result|
+        if ($result | describe | str starts-with "record") and $result.outbound? != null and $result.status? != null {
+          print (sb-format-result $result)
+        } else {
+          $result | table | print
+        }
+      } | ignore
+    } else if (term size).columns >= 100 { table --expand } else { table }
+  }
+}
+
+export def sb-format-result [result: record] {
+  let mark = if $result.status in [passed "HTTPS probe passed"] { "PASS" } else { "FAIL" }
+  mut report = {outbound: $result.outbound, mode: ($result.mode? | default 'quick'), status: $mark}
+  if $result.latency_ms? != null {
+    $report = ($report | insert HTTPS $"($result.latency_ms) ms")
+  }
+  if $result.udp? != null {
+    let udp = $result.udp
+    $report = ($report | insert UDP $"($udp.status | str uppercase) — ($udp.received)/($udp.sent) replies, ($udp.loss_percent)% loss")
+    if $udp.rtt_spread_ms? != null {
+      $report = ($report | insert 'RTT spread' $"($udp.rtt_spread_ms) ms")
+    }
+    let errors = (sample-errors ($udp.samples? | default []) | str join "\n")
+    if $errors != "" { $report = ($report | insert 'UDP errors' $errors) }
+  }
+  if $result.stability? != null {
+    let stability = $result.stability
+    $report = ($report | insert Stability $"($stability.status | str uppercase) — ($stability.successes)/($stability.attempts) connections succeeded")
+    for statistic in [min median max] {
+      let value = ($stability | get --optional $"($statistic)_latency_ms")
+      if $value != null { $report = ($report | insert $"HTTPS ($statistic)" $"($value) ms") }
+    }
+    if $stability.successes == 0 {
+      $report = ($report | insert 'HTTPS timing' 'n/a (no successful requests)')
+    }
+    let errors = (sample-errors ($stability.samples? | default []) | str join "\n")
+    if $errors != "" { $report = ($report | insert 'Stability errors' $errors) }
+  }
+  if $result.bandwidth? != null {
+    for direction in [download upload] {
+      let transfer = ($result.bandwidth | get --optional $direction)
+      if $transfer != null {
+        let label = ($direction | str capitalize)
+        let detail = if $transfer.status == "passed" { $"($transfer.mbps) Mbps, ($transfer.bytes) bytes" } else { $transfer.error? | default $transfer.status }
+        $report = ($report | insert $label $detail)
+      }
+    }
+  }
+  if $result.error? != null { $report = ($report | insert Error $result.error) }
+  $report | table --expand
+}
+
+def sample-errors [samples: list] {
+  $samples | where {|sample| $sample.error? != null }
+    | group-by --to-table target error | each {|group|
+      $"($group.target): ($group.error) [($group.items | length) failed samples]"
+    }
+}
+
 # Test the outbound itself, so routing rules cannot silently bypass the VPN.
-export def sb-test [outbound: string = "proxy", --wait] {
+export def sb-test [
+  outbound: string = "proxy"
+  --wait
+  --mode: string@sb-test-modes = "quick"
+  --attempts: int = 20
+  --bytes: int = 5000000
+  --threads: int = 0
+  --json # Use the standard Nushell display; records are always returned.
+] {
+  let pretty = not $json and not (is-redirected)
+  let live = $pretty and (is-terminal --stdout)
   let active = (resolve-active $outbound --wait=$wait)
   let tag = $active.outbound
   if ($active.protocol | str lowercase) == "direct" or $tag == "direct" {
     error make {msg: "Direct mode is selected, not a VPN; use sb use <VPN-tag> first"}
   }
-  probe-outbound $tag
+  if $mode == "quick" {
+    probe-outbound $tag | metadata set {|| merge {sb_test: $pretty} }
+  } else {
+    run-probes [$tag] $mode $attempts $bytes $threads $pretty $live | first
+  }
 }
 
-# Probe concrete VPN outbounds once each, without changing any selector.
-export def sb-test-all [] {
-  get-proxies | transpose outbound details | where {|item|
+# Return results as workers finish; the display hook renders a readable report.
+export def sb-test-all [
+  --mode: string@sb-test-modes = "quick"
+  --attempts: int = 20
+  --bytes: int = 5000000
+  --threads: int = 0
+  --json
+] {
+  let pretty = not $json and not (is-redirected)
+  let live = $pretty and (is-terminal --stdout)
+  let tags = (get-proxies | transpose outbound details | where {|item|
     let kind = ($item.details.type? | default "" | str lowercase)
     # The workstation transport only permits SSH destinations, not HTTPS probes.
     ($item.outbound not-in [direct workstation-hop] and $kind not-in [direct reject block dns selector urltest]
       and $item.details.all? == null and $item.details.now? == null)
-  } | par-each --threads 4 {|item|
-    try {
-      probe-outbound $item.outbound | select outbound status latency_ms
-    } catch {
-      {outbound: $item.outbound, status: "failed or timed out", latency_ms: null}
+  } | get outbound)
+  run-probes $tags $mode $attempts $bytes $threads $pretty $live
+}
+
+def run-probes [tags: list, mode: string, attempts: int, bytes: int, threads: int, pretty: bool, live: bool] {
+  if $mode not-in (sb-test-modes) { error make {msg: "Unknown test mode; use quick, udp, bandwidth, stability or full"} }
+  if $attempts < 1 or $bytes < 1 or $threads < 0 { error make {msg: "attempts and bytes must be positive; threads must be nonnegative"} }
+  if ($tags | is-empty) { return [] }
+  let config = if $mode == "quick" { null } else {
+    # Read only the fixed installed config as root; probes and repo code run as this user.
+    let installed = "/etc/sing-box/config.json"
+    try { open --raw $installed | from json } catch {
+      let response = (^sudo /usr/bin/python3 -I -c 'from pathlib import Path; print(Path("/etc/sing-box/config.json").read_text())' | complete)
+      if $response.exit_code != 0 { error make {msg: "Cannot read the installed config for isolated probes"} }
+      $response.stdout | from json
     }
-  } | sort-by outbound
+  }
+  const helper = (path self | path expand | path dirname | path dirname | path join sing-box probe.py)
+  let workers = if $threads > 0 { $threads } else if $mode in [bandwidth full] { 1 } else { 4 }
+  {tags: $tags, config: $config} | to json --raw
+    | ^python $helper --mode $mode --attempts $attempts --bytes $bytes --threads $workers
+    | lines | each {|line|
+      let result = ($line | from json)
+      if $live { print --stderr (sb-format-result $result) }
+      $result
+    }
+    | metadata set {|| merge {sb_test: $pretty, sb_test_displayed: $live} }
 }
 
 def probe-outbound [tag: string] {

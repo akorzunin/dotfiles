@@ -104,9 +104,9 @@ sb status
 sb current                 # config name, source path, installed path, service state
 sb active                  # selected group chain, outbound and protocol
 sb active auto             # inspect a differently named group
-sb test                    # HTTPS connectivity + latency via the selected VPN
-sb test vpn-nt1             # test a server without changing selection
-sb test-all                 # test every VPN outbound, keeping failed results
+sb test                    # fast Clash HTTPS delay check (not a reliability test)
+sb test vpn-nt1 --mode full # UDP + stability + bandwidth, without changing selection
+sb test-all --mode udp      # test every VPN outbound, printing results as they finish
 sb outbounds               # show live outbound selectors
 sb use vpn-nt1             # select an outbound without restarting
 sb use direct
@@ -172,23 +172,76 @@ to add it. `sb current` instead shows the installed config source, even offline.
 
 ## Check VPN connectivity
 
-`sb test` resolves the current selector and uses sing-box's Clash API to make
-an HTTPS probe to `https://www.gstatic.com/generate_204` through that outbound.
-It reports the outbound and latency in milliseconds, or returns an error on
-failure (30-second probe timeout, with a 35-second HTTP request limit). Direct mode is rejected, so a working direct
-connection is not reported as a working VPN. No selector changes are made.
+Both commands support `--mode quick|udp|bandwidth|stability|full`:
 
-`sb test-all` tests every concrete VPN outbound advertised by the API, with up
-to four probes in parallel. It returns a table of outbound, status and latency;
-failed or timed-out probes stay in the table with an empty latency. Selector
-and URL-test groups, direct, reject/block and DNS outbounds are skipped, as is
-`workstation-hop`: that intermediate transport only allows SSH destinations.
-The complete `ssh-via-workstation` and `cherry-ssh-via-workstation` exits are still
-tested. It uses the same timeouts as `sb test` and does not change the selected outbound.
+| Mode | What it checks |
+| --- | --- |
+| `quick` (default) | One Clash API HTTPS delay probe to gstatic. Fast screening only: a pass does **not** establish UDP support or sustained reliability. The probe timeout is 30 seconds, with a 35-second API request limit. |
+| `udp` | Six independent SOCKS5 UDP/STUN binding probes: three each to Google (19302) and Cloudflare (3478), with a 4-second receive timeout. Reports replies, loss, RTT spread and per-sample errors, including unsupported UDP. |
+| `stability` | Exactly `--attempts` fresh HTTPS connections (default 20), alternating gstatic and Cloudflare, with a 1-second pause between attempts. Failures and timeouts count as attempts; testing continues after them. No retries or connection reuse hide late timeouts. Reports successes/attempts, min/median/max HTTPS request times from successful attempts, and individual samples. These are complete request times, not network RTT; timing is unavailable if every attempt fails. Each request has a 15-second limit, so slower connections make the test take longer—not reduce the attempt count. |
+| `bandwidth` | Bounded Cloudflare download **and** upload. `--bytes` sets the payload in each direction (default 5,000,000: ~10 MB total per outbound). Reports Mbps and transfer failures; each transfer has a 15-second limit. This is a short throughput sample, not a maximum line-speed measurement. |
+| `full` | UDP, stability, then bandwidth. |
 
-This checks outbound connectivity, not just whether the service is running.
-It does not test app proxy settings or the local port 12334 listener. A failure
-can also mean the test site is unavailable; use `sb logs` to investigate.
+```nu
+sb test --mode stability --attempts 30
+sb test vpn-nt1 --mode udp
+sb test-all --mode full --attempts 30 --bytes 10000000
+sb test-all --mode stability --threads 2
+sb test-all --mode bandwidth | to json       # collect complete structured results
+sb test-all | sort-by outbound                # opt into a final sorted table
+```
+
+`sb test` resolves the current selector to its concrete outbound. Direct mode is
+rejected. `sb test-all` tests each concrete VPN outbound, skipping selector and
+URL-test groups, direct, reject/block, DNS, and `workstation-hop` (an intermediate
+transport which only permits SSH destinations). The complete
+`ssh-via-workstation` and `cherry-ssh-via-workstation` exits are still tested.
+
+**Interactive reports show a native two-column Nushell table for each outbound
+as it finishes**, including UDP loss, connection counts, speeds and failure
+reasons as flat, wrapping cells—not collapsed nested records. Repeated errors are grouped by target with their sample count.
+
+The commands **always return structured data**: a record for `sb test`, and a
+stream of records for `sb test-all`. The display hook only formats the view, so
+`$ans.last` retains the complete result (with this config's result capture enabled).
+No `--json` flag is needed to pipe, save or inspect results; it remains available
+to opt out of the readable report. Pipelines and variable assignments do not
+print live reports. `| to json` naturally waits to collect all results.
+
+```nu
+sb test --mode full
+$ans.last.udp.samples | table --expand  # inspect the preceding test's raw samples
+
+let results = (sb test-all --mode full)
+$results | where status != passed | to json
+```
+
+Detailed modes keep failures in the result records, including for a single
+outbound; inspect `status` in scripts. The original single-outbound quick check
+still raises an error on failure.
+
+Deep modes read `/etc/sing-box/config.json` (prompting for `sudo` read access if
+needed), then run temporary **unprivileged** sing-box instances with private
+loopback SOCKS listeners. Production inbounds, controllers, cache, services and
+routing rules are not started; the probe is forced through the requested exit,
+retaining its configured detours and DNS. The running service and selectors are
+not changed. Temporary configs, listeners and processes are cleaned up; Ctrl-C
+cleanup can wait for the current bounded request. Configs requiring privileged
+endpoints, files unavailable to your user, or DNS policies referencing removed
+route rule sets can fail startup; the error is shown.
+`quick` needs only the live Clash API and does not read the config.
+
+`--threads` defaults to four workers, or **one for bandwidth/full** to avoid
+competing bandwidth samples. Override it to trade accuracy for speed. Public
+probe endpoints see your exit address; bandwidth consumes the stated data for
+each tested outbound. A failed endpoint alone is not proof the VPN is broken.
+
+UDP/STUN is a WebRTC reachability check, **not a Discord voice guarantee**: it
+does not test Discord's media servers, ICE negotiation, long-lived media streams,
+or application routing. RTT spread is not RTP media jitter. These tests also do
+not check app proxy settings or the production port 12334 listener. In particular,
+Discord UDP must actually enter sing-box (e.g. via TUN or a UDP-capable app proxy);
+setting only a desktop HTTP proxy does not capture it. Use `sb logs` to investigate.
 
 ## Proxy mode (no TUN)
 

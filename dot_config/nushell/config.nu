@@ -72,10 +72,18 @@ use ($config_dir | path join sing-box.nu) *
 use ($config_dir | path join push-check.nu)
 use ($config_dir | path join dropbox-sync-completions.nu) *
 
+# Render diagnostic metadata only at display time, preserving records in $ans.last.
+$env.config.hooks.display_output = {|| sb-display }
+
 # Config discovery works without a running service; outbound selection uses its API.
 def sb [
   action: string@sb-actions = "list",
   outbound?: string@sb-arguments,
+  --mode: string@sb-test-modes = "quick" # quick, udp, bandwidth, stability, full
+  --attempts: int = 20 # Number of fresh connections in stability tests.
+  --bytes: int = 5000000 # Bytes per download/upload sample.
+  --threads: int = 0 # Auto: 4 workers, or 1 for bandwidth/full.
+  --json # Use standard Nushell display instead of the diagnostic report.
 ] {
   let api = "http://127.0.0.1:9091"
   match $action {
@@ -92,8 +100,8 @@ def sb [
     "apply" => {
       if ($outbound | is-empty) { sb-apply } else { sb-apply $outbound }
     }
-    "test" => { sb-test ($outbound | default "proxy") }
-    "test-all" => { sb-test-all }
+    "test" => { sb-test ($outbound | default "proxy") --mode $mode --attempts $attempts --bytes $bytes --threads $threads --json=$json }
+    "test-all" => { sb-test-all --mode $mode --attempts $attempts --bytes $bytes --threads $threads --json=$json }
     "outbounds" => {
       let response = (^curl --fail-with-body --silent --show-error --noproxy "*" $"($api)/proxies" | complete)
       if $response.exit_code != 0 {

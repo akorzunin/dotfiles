@@ -2,11 +2,16 @@
 
 Uses real nu/sing-box validation, but mocks sudo: no system config is changed.
 """
+import fcntl
 import json
 import os
+import pty
 from pathlib import Path
+import select
 import subprocess
+import time
 import tempfile
+import termios
 import unittest
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -100,11 +105,11 @@ class SingBoxTest(unittest.TestCase):
             ' print("not json" if tag == "malformed" else json.dumps({"delay": 123}))\n'
         )
         curl.chmod(0o755)
-        result = self.nu(f'{DISPATCHER}; sb test-all | to json')
+        result = self.nu(f'{DISPATCHER}; sb test-all --json | to json')
         self.assertEqual(result.returncode, 0, result.stderr)
         rows = json.loads(result.stdout)
         expected = ['cherry-ssh-via-workstation', 'failed', 'good vpn', 'malformed', 'ssh-via-workstation', 'timeout']
-        self.assertEqual([row['outbound'] for row in rows], expected)
+        self.assertCountEqual([row['outbound'] for row in rows], expected)
         for row in rows:
             if row['outbound'] in ['good vpn', 'ssh-via-workstation', 'cherry-ssh-via-workstation']:
                 self.assertEqual(row['status'], 'HTTPS probe passed')
@@ -114,9 +119,172 @@ class SingBoxTest(unittest.TestCase):
                 self.assertIsNone(row['latency_ms'])
         self.assertCountEqual((self.home / 'probe-calls').read_text().splitlines(), expected)
 
+    def test_all_streams_before_slow_probe_finishes(self):
+        curl = self.home / 'bin/curl'
+        curl.write_text(
+            '#!/usr/bin/env python3\nimport json, sys, time\n'
+            'if sys.argv[-1].endswith("/proxies"):\n'
+            ' print(json.dumps({"proxies": {"slow": {"type": "VLESS"}, "fast": {"type": "Trojan"}}}))\n'
+            'else:\n'
+            ' if "/slow/" in sys.argv[-1]: time.sleep(4)\n'
+            ' print(json.dumps({"delay": 123}))\n'
+        )
+        curl.chmod(0o755)
+        for suffix in ['| metadata set {|| merge {sb_test: true}} | sb-display', '--json | each {|row| print ($row | to json --raw)}']:
+            with self.subTest(suffix=suffix):
+                process = subprocess.Popen(
+                    ['nu', '--no-config-file', '-c', f'use "{MODULE}" *; sb-test-all {suffix}'],
+                    env=self.env, text=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+                )
+                try:
+                    start = time.monotonic()
+                    ready, _, _ = select.select([process.stdout], [], [], 3)
+                    self.assertTrue(ready, 'no result until all workers completed')
+                    first = os.read(process.stdout.fileno(), 65536).decode()
+                    self.assertTrue(first)
+                    self.assertLess(time.monotonic() - start, 3)
+                    self.assertIsNone(process.poll())
+                    rest, stderr = process.communicate(timeout=8)
+                    self.assertEqual(process.returncode, 0, stderr)
+                    self.assertIn('fast', first + rest)
+                    self.assertIn('slow', rest)
+                finally:
+                    if process.poll() is None:
+                        process.kill()
+                        process.communicate()
+
+    def test_deep_dispatch_and_fixed_privileged_config_read(self):
+        self.mock_probe({'proxy': {'now': 'test vpn'}, 'test vpn': {'type': 'Socks5'}})
+        # Only the config reader runs under sudo; the helper's sing-box is unprivileged.
+        sudo = self.home / 'bin/sudo'
+        sudo.write_text('#!/usr/bin/env python3\nimport json, sys\n'
+                        'assert sys.argv[1:4] == ["/usr/bin/python3", "-I", "-c"], sys.argv\n'
+                        'assert "\\"/etc/sing-box/config.json\\"" in sys.argv[4]\n'
+                        'print(json.dumps({"outbounds": []}))\n')
+        fake = self.home / 'bin/sing-box'
+        fake.write_text('#!/bin/sh\necho "intentional startup failure" >&2\nexit 1\n')
+        fake.chmod(0o755)
+        for command in ['test "test vpn"', 'test-all']:
+            result = self.nu(f'{DISPATCHER}; sb {command} --mode full --attempts 2 --bytes 10 --threads 1 --json | to json')
+            self.assertEqual(result.returncode, 0, result.stderr)
+            data = json.loads(result.stdout)
+            row = data[0] if command == 'test-all' else data
+            self.assertEqual(row['mode'], 'full')
+            self.assertIn('intentional startup failure', row['error'])
+            # No flag is needed to collect the full result, including nested failures.
+            captured = self.nu(f'{DISPATCHER}; let result = (sb {command} --mode full); $result | to json')
+            self.assertEqual(captured.returncode, 0, captured.stderr)
+            self.assertEqual(json.loads(captured.stdout), data)
+        for flags in ['--mode invalid', '--attempts 0', '--attempts -1', '--bytes -1', '--threads -1']:
+            result = self.nu(f'{DISPATCHER}; sb test-all {flags}')
+            self.assertNotEqual(result.returncode, 0, flags)
+
+    def test_report_exposes_nested_measurements_and_errors(self):
+        row = {
+            'outbound': 'test vpn', 'mode': 'full', 'status': 'failed',
+            'udp': {'status': 'degraded', 'received': 3, 'sent': 6, 'loss_percent': 50,
+                    'rtt_spread_ms': 12, 'samples': [{'target': 'stun.example:3478', 'error': 'timed out'}] * 3},
+            'stability': {'status': 'unstable', 'successes': 2, 'attempts': 20,
+                          'min_latency_ms': 45, 'median_latency_ms': 84, 'max_latency_ms': 123,
+                          'samples': [{'target': 'https://example.com', 'error': 'late timeout'}]},
+            'bandwidth': {'download': {'status': 'passed', 'mbps': 12.4, 'bytes': 5000000},
+                          'upload': {'status': 'failed', 'error': 'upload timeout'}},
+        }
+        literal = json.dumps(json.dumps(row))
+        result = self.nu(f'{literal} | from json | metadata set {{|| merge {{sb_test: true}} }} | sb-display')
+        self.assertEqual(result.returncode, 0, result.stderr)
+        for text in ['FAIL', 'test vpn', '3/6 replies, 50% loss', 'RTT spread', '12 ms',
+                     'timed out [3 failed samples]', '2/20 connections succeeded', 'late timeout',
+                     'HTTPS min', '45 ms', 'HTTPS median', '84 ms', 'HTTPS max', '123 ms',
+                     'Download', '12.4 Mbps', 'Upload', 'upload timeout']:
+            self.assertIn(text, result.stdout)
+        self.assertIn('│', result.stdout)
+        self.assertNotIn('[FAIL]', result.stdout)
+        self.assertNotIn('{record', result.stdout)
+        # A projection keeps metadata but must still display without formatter errors.
+        result = self.nu(f'{literal} | from json | metadata set {{|| merge {{sb_test: true}} }} | get status | sb-display')
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertIn('failed', result.stdout)
+
+    def test_report_marks_timing_unavailable_when_all_connections_fail(self):
+        row = {'outbound': 'test vpn', 'mode': 'stability', 'status': 'failed',
+               'stability': {'status': 'failed', 'successes': 0, 'attempts': 3,
+                             'min_latency_ms': None, 'median_latency_ms': None, 'max_latency_ms': None}}
+        literal = json.dumps(json.dumps(row))
+        result = self.nu(f'sb-format-result ({literal} | from json)')
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertIn('0/3 connections succeeded', result.stdout)
+        self.assertIn('n/a (no successful requests)', result.stdout)
+        self.assertNotIn('HTTPS median', result.stdout)
+
+    def test_interactive_report_streams_and_ans_keeps_records(self):
+        curl = self.home / 'bin/curl'
+        curl.write_text(
+            '#!/usr/bin/env python3\nimport json, sys, time\n'
+            'if sys.argv[-1].endswith("/proxies"):\n'
+            ' print(json.dumps({"proxies": {"slow": {"type": "VLESS"}, "fast": {"type": "Trojan"}}}))\n'
+            'else:\n'
+            ' if "/slow/" in sys.argv[-1]: time.sleep(4)\n'
+            ' print(json.dumps({"delay": 123}))\n'
+        )
+        curl.chmod(0o755)
+        master, slave = pty.openpty()
+        termios.tcsetwinsize(slave, (24, 80))
+
+        def session():
+            os.setsid()
+            fcntl.ioctl(0, termios.TIOCSCTTY, 0)
+
+        # Use the actual configured hook and dispatcher, without unrelated startup tools.
+        config = (ROOT / 'dot_config/nushell/config.nu').read_text()
+        hook = next(line for line in config.splitlines() if line.startswith('$env.config.hooks.display_output ='))
+        setup = (f'use "{MODULE}" *; {DISPATCHER}; {hook}; '
+                 '$env.config.show_banner = false; $env.config.max_last_result_size = 100mb; '
+                 '$env.PROMPT_COMMAND = {|| "SB_READY> "}; $env.PROMPT_INDICATOR = ""')
+        process = subprocess.Popen(['nu', '--no-config-file', '--no-history', '-e', setup],
+                                   env=dict(self.env, TERM='dumb'), stdin=slave, stdout=slave, stderr=slave,
+                                   preexec_fn=session)
+        os.close(slave)
+
+        def until(marker, timeout=5):
+            output = b''
+            deadline = time.monotonic() + timeout
+            while marker not in output and time.monotonic() < deadline:
+                if select.select([master], [], [], 0.05)[0]:
+                    try:
+                        chunk = os.read(master, 65536)
+                    except OSError:
+                        break
+                    output += chunk
+                    if b'\x1b[6n' in chunk:
+                        os.write(master, b'\x1b[1;1R')
+            self.assertIn(marker, output)
+            return output
+
+        try:
+            until(b'SB_READY> ')
+            os.write(master, b'sb test-all\r')
+            first = until(b'123 ms', timeout=3)
+            self.assertIn(b'fast', first)
+            self.assertIn('│'.encode(), first)
+            self.assertNotIn(b'slow', first)
+            rest = until(b'slow')
+            if b'SB_READY> ' not in rest:
+                rest += until(b'SB_READY> ')
+            self.assertEqual((first + rest).count(b'fast'), 1)
+            self.assertEqual((first + rest).count(b'slow'), 1)
+            os.write(master, b'$ans.last | to json --raw\r')
+            saved = until(b'"latency_ms":123')
+            self.assertIn(b'"outbound":"fast"', saved)
+            self.assertIn(b'"outbound":"slow"', saved)
+        finally:
+            process.terminate()
+            process.wait(timeout=5)
+            os.close(master)
+
     def test_all_empty_and_api_unavailable(self):
         self.mock_probe({'proxy': {'type': 'Selector'}, 'bypass': {'type': 'Direct'}})
-        result = self.nu('sb-test-all | to json')
+        result = self.nu('sb-test-all --json | to json')
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertEqual(json.loads(result.stdout), [])
         curl = self.home / 'bin/curl'
