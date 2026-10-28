@@ -156,6 +156,15 @@ gsettings set org.gnome.system.proxy mode 'manual'
 gsettings set org.gnome.system.proxy mode 'none'
 ```
 
+### Direct Discord / YouTube with zapret
+
+The optional [zapret setup](../../etc/zapret/README.md) saves the tested strategies
+and separate `00-00-zapret.json` / `00-local-udp.json` overlays. It keeps those
+services direct, including requests to the local HTTP proxy, while preserving
+other proxy routing. The overlays do not contain private VPN outbounds and
+survive subscription refreshes. Install explicitly; general dotfiles setup does
+not change system-wide DPI bypass rules.
+
 ## Active outbound and protocol
 
 `sb active [outbound-tag]` follows the current selection through nested selector

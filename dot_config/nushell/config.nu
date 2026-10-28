@@ -427,7 +427,7 @@ def --wrapped hpis [...args: string] {
 }
 alias hpil = hpi '/codex-limit'
 def --wrapped hdiscord [...args: string] {
-  with-proxy { gui vesktop ...$args }
+  gui env -u http_proxy -u https_proxy -u all_proxy -u HTTP_PROXY -u HTTPS_PROXY -u ALL_PROXY vesktop --no-proxy-server ...$args
 }
 def --wrapped htg [...args: string] {
   with-proxy { QT_QPA_PLATFORMTHEME=xdgdesktopportal gui Telegram ...$args }

@@ -114,4 +114,11 @@ when omitted, downloads it and enables hourly automatic updates; `sb pull` refre
 shows whether the config came from a file or URL; `sb active [outbound-tag]` shows
 the selected outbound and protocol via the local API. See
 [sing-box usage and safety details](dot_config/sing-box/README.md).
-The shared desktop template's local proxy uses port `12334`
+The shared desktop template's local proxy uses port `12334`.
+
+## zapret: direct Discord / YouTube
+
+The ISP-tested configuration, pinned-source installer, sing-box coexistence
+rules, Vesktop WebRTC setting, verification notes, and rollback are saved in
+[`etc/zapret`](etc/zapret/README.md). Installation is explicit and is not run by
+`update.nu`; the setup preserves proxy routing for other sites.

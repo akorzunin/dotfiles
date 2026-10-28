@@ -1,0 +1,41 @@
+# ISP-tested baseline on enp12s0, 2026-10-28; voice tuning is experimental.
+# See /opt/zapret/README.local.md.
+. /opt/zapret/config.default
+FWTYPE=nftables
+WS_USER=nobody
+IFACE_WAN=enp12s0
+DISABLE_IPV6=1
+TPWS_ENABLE=0
+TPWS_SOCKS_ENABLE=0
+NFQWS_ENABLE=1
+NFQWS_PORTS_TCP=443,2053,2083,2087,2096,8443
+NFQWS_PORTS_UDP=443
+# Queue voice ports throughout the call for later STUN/ICE rechecks.
+# CPU scales with packet rate; narrow to an endpoint nft set if throughput matters.
+NFQWS_PORTS_UDP_KEEPALIVE=19294-19344,50000-50100
+NFQWS_TCP_PKT_OUT=12
+NFQWS_TCP_PKT_IN=3
+NFQWS_UDP_PKT_OUT=9
+NFQWS_UDP_PKT_IN=0
+MODE_FILTER=none
+# sing-box uses exact ct mark comparisons; do not OR zapret bits into ct marks.
+# No TTL-expiry tricks are used by these strategies.
+FILTER_TTL_EXPIRED_ICMP=0
+# A fixed fake SNI is essential for sustained Discord WebSockets on this ISP.
+# Random fake SNI passed TLS tests but froze after a few WebSocket exchanges.
+# Voice trial: two fakes instead of six per discovery/STUN request to reduce
+# fake bursts during ICE rechecks. Restore six if joining/rejoining regresses.
+NFQWS_OPT="
+--filter-tcp=443,2053,2083,2087,2096,8443 --hostlist=/opt/zapret/hosts-discord.txt
+--dpi-desync=fake,multisplit --dpi-desync-split-pos=1
+--dpi-desync-fooling=badseq --dpi-desync-repeats=6
+--dpi-desync-fake-tls-mod=rnd,dupsid,sni=www.google.com --new
+--filter-tcp=443 --hostlist=/opt/zapret/hosts-youtube.txt
+--dpi-desync=fake,multisplit --dpi-desync-split-pos=1
+--dpi-desync-fooling=badseq --dpi-desync-repeats=6 --new
+--filter-udp=443 --filter-l7=quic
+--hostlist=/opt/zapret/hosts-youtube.txt --hostlist=/opt/zapret/hosts-discord.txt
+--dpi-desync=fake --dpi-desync-repeats=6 --new
+--filter-udp=443,19294-19344,50000-50100 --filter-l7=discord,stun
+--dpi-desync=fake --dpi-desync-repeats=2
+"

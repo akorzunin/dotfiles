@@ -1,0 +1,55 @@
+{
+  "experimental": {
+    "cache_file": {
+      "enabled": true
+    }
+  },
+  "inbounds": [
+    {
+      "type": "tun",
+      "tag": "local-udp-in",
+      "interface_name": "sing-udp",
+      "address": ["172.19.0.1/30"],
+      "mtu": 1500,
+      "auto_route": true,
+      "auto_redirect": true,
+      "dns_mode": "disabled",
+      "include_uid": [1000],
+      "route_exclude_address": [
+        "10.0.0.0/8",
+        "127.0.0.0/8",
+        "169.254.0.0/16",
+        "172.16.0.0/12",
+        "192.168.0.0/16",
+        "224.0.0.0/4",
+        "240.0.0.0/4"
+      ]
+    }
+  ],
+  "route": {
+    "auto_detect_interface": true,
+    "rules": [
+      // Steam relay-port heuristic; add endpoint rules if a game uses other ports.
+      {
+        "inbound": "local-udp-in",
+        "network": "udp",
+        "port_range": ["27000:27200"],
+        "action": "bypass",
+        "outbound": "direct"
+      },
+      {
+        "inbound": "local-udp-in",
+        "network": ["tcp", "icmp"],
+        "action": "bypass",
+        "outbound": "direct"
+      },
+      {
+        "inbound": "local-udp-in",
+        "network": "udp",
+        "port": 53,
+        "action": "bypass",
+        "outbound": "direct"
+      }
+    ]
+  }
+}

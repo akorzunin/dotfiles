@@ -1,0 +1,41 @@
+{
+  "route": {
+    "rules": [
+      {
+        "inbound": "local-udp-in",
+        "process_name": ["vesktop", "Discord", "discord"],
+        "action": "bypass",
+        "outbound": "direct"
+      },
+      {
+        "inbound": "local-udp-in",
+        "network": "udp",
+        "port": 443,
+        "action": "sniff"
+      },
+      {
+        "inbound": "local-udp-in",
+        "domain_suffix": [
+          "discord.com", "discord.gg", "discordapp.com", "discordapp.net",
+          "discord.media", "discordcdn.com", "discord.dev", "dis.gd",
+          "youtube.com", "youtu.be", "youtube-nocookie.com", "googlevideo.com",
+          "ytimg.com", "ggpht.com", "youtubei.googleapis.com",
+          "youtube.googleapis.com", "yt3.googleusercontent.com"
+        ],
+        "action": "bypass",
+        "outbound": "direct"
+      },
+      {
+        "domain_suffix": [
+          "discord.com", "discord.gg", "discordapp.com", "discordapp.net",
+          "discord.media", "discordcdn.com", "discord.dev", "dis.gd",
+          "youtube.com", "youtu.be", "youtube-nocookie.com", "googlevideo.com",
+          "ytimg.com", "ggpht.com", "youtubei.googleapis.com",
+          "youtube.googleapis.com", "yt3.googleusercontent.com"
+        ],
+        "action": "route",
+        "outbound": "direct"
+      }
+    ]
+  }
+}
