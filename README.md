@@ -46,6 +46,23 @@ checkout, or desktop packages are required on a server.
   After initialization, use `--schedule 30s` for autosync and `--check` for status.
   For setup and SSH browser authorization, see `dot_local/bin/dropbox-sync.md`.
 
+## SSH inventory selector
+
+```sh
+ssh-sel.nu ~/Documents/ansible-playbooks/hosts --host dyn1
+```
+
+Omit `--host` to choose with fzf. Requires Nushell, Python 3 and OpenSSH.
+The selector reads the inventory on each run and uses the host's port (default
+22), dedicated `ansible_ssh_private_key_file`, and `ansible_ssh_args`,
+`ansible_ssh_common_args`, `ansible_ssh_extra_args`. Quoted options such as
+`ProxyCommand` and strict `UserKnownHostsFile` pins are passed through to SSH.
+`--printcmd` copies the complete shell-quoted command using `wl-copy`;
+`--copyid` uses the same connection options with `ssh-copy-id`.
+This is a flat YAML inventory selector, not Ansible's group-variable/template
+resolver. Server replacement must still refresh the inventory and trusted pins;
+the Cherry deployment in ansible-playbooks now updates its managed `dyn1` block.
+
 ## Yazi
 
 All shared Yazi settings live in `dot_config/yazi`; Hyprconf owns only the desktop
