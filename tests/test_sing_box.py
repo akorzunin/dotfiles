@@ -59,6 +59,50 @@ class SingBoxTest(unittest.TestCase):
         )
         curl.chmod(0o755)
 
+    def test_authenticated_api_commands_and_completions(self):
+        proxies = {'proxy': {'type': 'Selector', 'now': 'test vpn', 'all': ['test vpn', 'direct']},
+                   'test vpn': {'type': 'Socks5'}}
+        curl = self.home / 'bin/curl'
+        curl.write_text(
+            '#!/usr/bin/env python3\nimport json, os, sys\n'
+            'expected = "Authorization: Bearer " + os.environ.get("EXPECTED_SECRET", "admin")\n'
+            'if (os.environ.get("EXPECTED_SECRET") == "" and any("Authorization:" in arg for arg in sys.argv)) or (os.environ.get("EXPECTED_SECRET") != "" and expected not in sys.argv):\n'
+            ' print("Unauthorized", file=sys.stderr); sys.exit(22)\n'
+            'with open(os.path.join(os.environ["HOME"], "api-calls"), "a") as log:\n'
+            ' log.write(json.dumps(sys.argv[1:]) + "\\n")\n'
+            f'proxies = {proxies!r}\n'
+            'if "--request" in sys.argv:\n'
+            ' assert sys.argv[sys.argv.index("--request") + 1] == "PUT"\n'
+            ' assert json.loads(sys.argv[sys.argv.index("--data") + 1]) == {"name": "test vpn"}\n'
+            'elif sys.argv[-1].endswith("/proxies"):\n'
+            ' print(json.dumps({"proxies": proxies}))\n'
+            'else:\n'
+            ' assert sys.argv[-1].endswith("/test%20vpn/delay"), sys.argv\n'
+            ' print(json.dumps({"delay": 123}))\n'
+        )
+        curl.chmod(0o755)
+        for secret in [None, 'custom-api-secret', '']:
+            if secret is not None:
+                self.env.update(SB_API_SECRET=secret, EXPECTED_SECRET=secret)
+            for command, expected in [
+                ('sb outbounds', proxies),
+                ('sb active', {'chain': 'proxy → test vpn', 'outbound': 'test vpn', 'protocol': 'Socks5'}),
+                ('sb-arguments "sb use "', ['test vpn', 'direct']),
+                ('sb-arguments "sb test "', ['proxy', 'test vpn']),
+            ]:
+                with self.subTest(secret=secret, command=command):
+                    result = self.nu(f'{DISPATCHER}; {command} | to json')
+                    self.assertEqual(result.returncode, 0, result.stderr)
+                    self.assertEqual(json.loads(result.stdout), expected)
+            for action in ['use', 'select', 'change']:
+                result = self.nu(f'{DISPATCHER}; sb {action} "test vpn"')
+                self.assertEqual(result.returncode, 0, result.stderr)
+            for action in ['test', 'test-all']:
+                result = self.nu(f'{DISPATCHER}; sb {action} --json | to json')
+                self.assertEqual(result.returncode, 0, result.stderr)
+                data = json.loads(result.stdout)
+                self.assertEqual((data[0] if action == 'test-all' else data)['latency_ms'], 123)
+
     def test_vpn_probe(self):
         proxies = {"proxy": {"type": "Selector", "now": "test vpn"}, "test vpn": {"type": "Socks5"}}
         self.mock_probe(proxies)

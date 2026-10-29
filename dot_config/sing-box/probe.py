@@ -33,7 +33,9 @@ def curl(*args, timeout=35):
 
 
 def quick(tag):
-    data = json.loads(curl("--get", "--data-urlencode", f"url={HTTPS_TARGETS[0]}",
+    secret = os.environ.get("SB_API_SECRET", "admin")
+    headers = ["--header", f"Authorization: Bearer {secret}"] if secret else []
+    data = json.loads(curl(*headers, "--get", "--data-urlencode", f"url={HTTPS_TARGETS[0]}",
                            "--data-urlencode", "timeout=30000",
                            f"http://127.0.0.1:9091/proxies/{quote(tag, safe='')}/delay"))
     return {"status": "HTTPS probe passed", "latency_ms": data["delay"]}

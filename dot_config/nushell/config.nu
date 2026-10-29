@@ -103,7 +103,7 @@ def sb [
     "test" => { sb-test ($outbound | default "proxy") --mode $mode --attempts $attempts --bytes $bytes --threads $threads --json=$json }
     "test-all" => { sb-test-all --mode $mode --attempts $attempts --bytes $bytes --threads $threads --json=$json }
     "outbounds" => {
-      let response = (^curl --fail-with-body --silent --show-error --noproxy "*" $"($api)/proxies" | complete)
+      let response = (^curl --fail-with-body --silent --show-error --noproxy "*" ...(sb-api-headers) $"($api)/proxies" | complete)
       if $response.exit_code != 0 {
         print ($response.stderr | str trim)
         error make {msg: "Could not connect to the sing-box API; is sing-box running?"}
@@ -121,7 +121,7 @@ def sb [
         print $"Tip: to load this config file, run sb apply ($outbound). Selection uses case-sensitive outbound tags, not filenames."
       }
       let payload = ({name: $outbound} | to json --raw)
-      let response = (^curl --fail-with-body --silent --show-error --noproxy "*" --max-time 5 --request PUT --header "Content-Type: application/json" --data $payload $"($api)/proxies/proxy" | complete)
+      let response = (^curl --fail-with-body --silent --show-error --noproxy "*" --max-time 5 ...(sb-api-headers) --request PUT --header "Content-Type: application/json" --data $payload $"($api)/proxies/proxy" | complete)
       if $response.exit_code != 0 {
         print ($response.stderr | str trim)
         if $response.exit_code == 7 {

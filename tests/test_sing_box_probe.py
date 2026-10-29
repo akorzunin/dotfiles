@@ -1,5 +1,6 @@
 """Deep probe tests use only local servers, never public test endpoints."""
 import copy
+import os
 from contextlib import nullcontext
 import importlib.util
 from pathlib import Path
@@ -21,6 +22,20 @@ spec.loader.exec_module(probe)
 class ProbeTest(unittest.TestCase):
     def setUp(self):
         probe.STOP.clear()
+
+    def test_quick_api_auth_defaults_override_and_no_secret(self):
+        for secret in [None, 'custom-api-secret', '']:
+            with self.subTest(secret=secret), patch.dict(os.environ, {}, clear=True):
+                if secret is not None:
+                    os.environ['SB_API_SECRET'] = secret
+                with patch.object(probe, 'curl', return_value='{"delay": 12}') as curl:
+                    self.assertEqual(probe.quick('vpn / test')['latency_ms'], 12)
+                args = curl.call_args.args
+                if secret == '':
+                    self.assertNotIn('--header', args)
+                else:
+                    self.assertIn('Authorization: Bearer ' + (secret or 'admin'), args)
+                self.assertEqual(args[-1], 'http://127.0.0.1:9091/proxies/vpn%20%2F%20test/delay')
 
     def test_isolated_config_keeps_dependencies_without_production_listeners(self):
         config = {

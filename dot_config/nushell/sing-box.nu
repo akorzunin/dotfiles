@@ -1,3 +1,9 @@
+# Match the Ansible-generated local Clash API; override for custom configs.
+export def sb-api-headers [] {
+  let secret = ($env.SB_API_SECRET? | default "admin")
+  if $secret == "" { [] } else { [--header $"Authorization: Bearer ($secret)"] }
+}
+
 export def sb-actions [] {
   [list configs current active setup pull apply test test-all on off enable disable restart status logs outbounds use select change]
 }
@@ -14,7 +20,7 @@ export def sb-arguments [buffer: string] {
   if $action in [use select change test active] {
     # Completion must remain quiet and bounded when the service is stopped.
     return (try {
-      let response = (^curl --fail --silent --noproxy "*" --max-time 1 http://127.0.0.1:9091/proxies | complete)
+      let response = (^curl --fail --silent --noproxy "*" --max-time 1 ...(sb-api-headers) http://127.0.0.1:9091/proxies | complete)
       if $response.exit_code != 0 { return [] }
       let proxies = ($response.stdout | from json | get proxies)
       if $action in [test active] {
@@ -119,7 +125,7 @@ export def sb-active [outbound: string = "proxy"] {
 def get-proxies [--wait] {
   let api = "http://127.0.0.1:9091"
   let retries = if $wait { [--retry 5 --retry-connrefused --retry-delay 1 --retry-max-time 5] } else { [] }
-  let response = (^curl --fail-with-body --silent --show-error --noproxy "*" --max-time 5 ...$retries $"($api)/proxies" | complete)
+  let response = (^curl --fail-with-body --silent --show-error --noproxy "*" --max-time 5 ...$retries ...(sb-api-headers) $"($api)/proxies" | complete)
   if $response.exit_code != 0 {
     error make {msg: "Cannot reach the sing-box API; run sb status or sb on"}
   }
@@ -288,7 +294,7 @@ def probe-outbound [tag: string] {
   let api = "http://127.0.0.1:9091"
   let target = "https://www.gstatic.com/generate_204"
   let encoded = ($tag | url encode --all)
-  let result = (^curl --fail-with-body --silent --show-error --noproxy "*" --max-time 35 --get --data-urlencode $"url=($target)" --data-urlencode "timeout=30000" $"($api)/proxies/($encoded)/delay" | complete)
+  let result = (^curl --fail-with-body --silent --show-error --noproxy "*" --max-time 35 ...(sb-api-headers) --get --data-urlencode $"url=($target)" --data-urlencode "timeout=30000" $"($api)/proxies/($encoded)/delay" | complete)
   if $result.exit_code != 0 {
     error make {msg: $"VPN check failed for ($tag): HTTPS probe failed or timed out. The server or test site may be unavailable; see sb logs."}
   }
