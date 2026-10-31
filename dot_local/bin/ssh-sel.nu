@@ -5,6 +5,7 @@ def main [
     --host (-h): string = ""
     --copyid (-c)
     --printcmd (-p)
+    --vault-password-file: path = ""
 ] {
     let inv  = (open -r $file | from yaml --ignore-tags)
     print $"Loaded inventory from ($file)"
@@ -24,8 +25,9 @@ def main [
     }
     print $"Selected host: (ansi green)($sel_host)(ansi reset)"
     let h = ($hosts | select $sel_host | flatten | first)
+    let inventory_key = (($h.ansible_private_key? | is-not-empty) or ($h.ansible_ssh_private_key? | is-not-empty))
     mut ssh_options = [-p (($h.ansible_port? | default 22) | into string)]
-    if ($h.ansible_ssh_private_key_file? | is-not-empty) {
+    if (not $inventory_key) and ($h.ansible_ssh_private_key_file? | is-not-empty) {
         $ssh_options = ($ssh_options | append [-o $"IdentityFile=($h.ansible_ssh_private_key_file | to json -r)"])
     }
     # SSH options contain shell quoting (notably ProxyCommand); split without executing it.
@@ -36,6 +38,26 @@ def main [
     }
     let ssh_options = $ssh_options
     let destination = $"($h.ansible_user)@($h.ansible_host)"
+    if $inventory_key {
+        if $printcmd {
+            # A raw ssh command cannot recreate an ephemeral decrypted identity.
+            mut command = [ssh-sel.nu $file --host $sel_host]
+            if ($vault_password_file | is-not-empty) {
+                $command = ($command | append [--vault-password-file $vault_password_file])
+            }
+            if $copyid { $command = ($command | append '--copyid') }
+            $command | to json -r
+                | ^python3 -c 'import json, shlex, sys; print(shlex.join(json.load(sys.stdin)))'
+                | tee { wl-copy }
+            return
+        }
+        let helper = ($env.CURRENT_FILE | path expand | path dirname | path join ssh-sel-key.py)
+        mut arguments = [--inventory $file --host $sel_host --vault-password-file $vault_password_file]
+        if $copyid { $arguments = ($arguments | append '--copyid') }
+        print "Connecting with Vault-backed inventory identity"
+        ^python3 $helper ...$arguments -- ...$ssh_options $destination
+        exit $env.LAST_EXIT_CODE
+    }
     let ssh_cmd = ([ssh] | append $ssh_options | append $destination | to json -r
         | ^python3 -c 'import json, shlex, sys; print(shlex.join(json.load(sys.stdin)))')
     match $printcmd {
