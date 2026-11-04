@@ -16,6 +16,7 @@ let subagent_extensions = [
 def --wrapped main [
     --default
     --edit
+    --explore
     --subagent
     ...args: string
 ] {
@@ -24,6 +25,8 @@ def --wrapped main [
         "edit"
     } else if $subagent {
         "subagent"
+    } else if $explore {
+        "explore"
     } else if $edit {
         "edit"
     } else {
@@ -33,6 +36,8 @@ def --wrapped main [
     let no_extensions = ($args | any {|arg| $arg == "--no-extensions" or $arg == "-ne" })
     let extensions = if $no_extensions {
         []
+    } else if $mode == "explore" {
+        $always_extensions ++ [($nu.home-dir | path join ".pi/agent/extensions/explore/prompt.ts")]
     } else if $mode == "subagent" {
         $always_extensions ++ $subagent_extensions
     } else {
@@ -43,6 +48,8 @@ def --wrapped main [
     let skill_discovery_args = if $no_extensions { [] } else { [--no-skills] }
     let mode_args = if $mode == "default" {
         []
+    } else if $mode == "explore" {
+        [--system-prompt "" --no-session --no-builtin-tools --no-context-files --no-skills --no-prompt-templates --no-mcp]
     } else {
         [--system-prompt ""]
     }

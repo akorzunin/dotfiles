@@ -420,7 +420,7 @@ def --wrapped hpi [...args: string] {
   with-proxy { pi-mode --default ...$args }
 }
 def --wrapped hpie [...args: string] {
-  with-proxy { pi-mode --edit ...$args }
+  with-proxy { pi-mode --explore ...$args }
 }
 def --wrapped hpis [...args: string] {
   with-proxy { pi-mode --subagent ...$args }
