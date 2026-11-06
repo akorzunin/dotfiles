@@ -1,16 +1,18 @@
 #!/usr/bin/env nu
 
+# Pin temporary (-e) npm extensions: ranges trigger registry checks on every launch.
+# Upgrade deliberately by changing these versions; Pi installs missing versions on launch.
 let always_extensions = [
     ($nu.home-dir | path join ".pi/agent/extensions/notify-sound.ts")
-    "npm:pi-web-access@^0.38.0"
-    "npm:@juicesharp/rpiv-ask-user-question@^2.13.2"
+    "npm:pi-web-access@0.38.0"
+    "npm:@juicesharp/rpiv-ask-user-question@2.15.0"
     ($nu.home-dir | path join ".pi/agent/extensions/notify-auto")
-    "npm:pi-codex-limit@^1.8.2"
+    "npm:pi-codex-limit@1.8.2"
 ]
 
 let subagent_extensions = [
   # "npm:@jerryan/pi-subagent-lite"
-  "npm:pi-subagents-lite@^1.16.0"
+  "npm:pi-subagents-lite@1.16.0"
 ]
 
 def --wrapped main [
