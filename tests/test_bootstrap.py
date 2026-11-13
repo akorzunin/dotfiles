@@ -74,6 +74,49 @@ class BootstrapTest(unittest.TestCase):
             # Idempotent without installing packages or requiring Hyprconf.
             self.run_nu(env, "--no-config-file", "update.nu")
 
+    def test_desktop_sync_installs_translation_only_when_missing(self):
+        for mode in ("missing", "installed", "failure", "sync-failure"):
+            with self.subTest(mode=mode), tempfile.TemporaryDirectory() as temporary:
+                home = Path(temporary)
+                env = self.server_env(home)
+                config_dir = home / ".config/nushell"
+                config_dir.mkdir(parents=True)
+                (config_dir / "config.nu").symlink_to(ROOT / "dot_config/nushell/config.nu")
+                checkout = home / "Documents/dotfiles"
+                checkout.mkdir(parents=True)
+                (checkout / "update.nu").write_text('print "UPDATED"\n')
+                git = home / "bin/git"
+                git.write_text(f"#!{sys.executable}\nimport sys\n"
+                               "if 'rev-parse' in sys.argv: print('main')\n"
+                               "if '--porcelain=v2' in sys.argv: print('# branch.ab +0 -0')\n"
+                               f"if 'pull' in sys.argv: sys.exit({1 if mode == 'sync-failure' else 0})\n")
+                git.chmod(0o755)
+                marker = home / "installed"
+                trans = home / "bin/trans"
+                sudo = home / "bin/sudo"
+                sudo.write_text(f"#!{sys.executable}\nfrom pathlib import Path\nimport sys\n"
+                                "assert sys.argv[1:] == ['pacman', '-S', '--needed', 'translate-shell']\n"
+                                f"Path({str(marker)!r}).write_text('called')\n"
+                                f"sys.exit({1 if mode == 'failure' else 0})\n")
+                sudo.chmod(0o755)
+                if mode == "installed":
+                    trans.write_text('#!/bin/sh\nexit 0\n')
+                    trans.chmod(0o755)
+                result = subprocess.run(
+                    [str(home / "bin/nu"), "--no-config-file", "-c",
+                     f'source "{config_dir / "config.nu"}"; desktop-sync -pu'],
+                    cwd=ROOT, env=env, text=True, capture_output=True, timeout=30,
+                )
+                self.assertEqual(marker.exists(), mode in ("missing", "failure"), result.stderr + result.stdout)
+                if mode in ("failure", "sync-failure"):
+                    self.assertNotEqual(result.returncode, 0)
+                    expected = "Failed to sync Neovim" if mode == "sync-failure" else "Translate Shell installation failed"
+                    self.assertIn(expected, result.stderr)
+                    self.assertNotIn("UPDATED", result.stdout)
+                else:
+                    self.assertEqual(result.returncode, 0, result.stderr + result.stdout)
+                    self.assertIn("UPDATED", result.stdout)
+
     def test_config_only_link_loads_repo_modules_before_update(self):
         with tempfile.TemporaryDirectory() as temporary:
             home = Path(temporary)

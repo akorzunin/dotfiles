@@ -1,0 +1,139 @@
+#!/usr/bin/env -S nu --no-config-file
+
+# Automatic EN/RU target; Google still detects the source language.
+def translate-target [text: string, source: string, target: string] {
+  if $target != 'auto' { return $target }
+  if $source != 'auto' {
+    return (if ($source | str lowercase) == 'ru' { 'en' } else { 'ru' })
+  }
+  # Script-majority heuristic, not language detection. Use --to for mixed/other
+  # languages; replace with a detection request if that distinction matters.
+  let ru = ($text | str replace --all --regex '(?i)[^а-яё]' '' | str length --chars)
+  let en = ($text | str replace --all --regex '(?i)[^a-z]' '' | str length --chars)
+  if $ru > $en { 'en' } else { 'ru' }
+}
+
+def translate-language [value: string] {
+  if $value != 'auto' and $value !~ '^[a-zA-Z]{2,3}(-[a-zA-Z]{2,8})*$' {
+    error make {msg: 'Use a language code (en, ru, de, zh-CN) or auto.'}
+  }
+  $value
+}
+
+def translate-run [text: string, source: string, target: string] {
+  let result = (^timeout --kill-after=2s 20s trans -no-init -engine google -verbose -no-ansi -no-bidi -s $source -t $target -- $text | complete)
+  if $result.exit_code in [124 137] {
+    error make {msg: 'Google Translate timed out after 20s; check your connection and retry.'}
+  }
+  if $result.exit_code != 0 or ($result.stdout | str trim | is-empty) {
+    let detail = ($result.stderr | str trim)
+    error make {msg: (if $detail != '' { $detail } else { 'Google returned no translation; check your connection or language codes.' })}
+  }
+  # Invalid language codes can produce warnings even when trans exits with zero.
+  if ($result.stderr | str trim) != '' {
+    error make {msg: ($result.stderr | str trim)}
+  }
+  $result.stdout | str trim --right --char "\n"
+}
+
+def translate-pick-language [] {
+  let languages = (^trans -no-init -no-ansi -no-bidi -list-all | complete)
+  if $languages.exit_code != 0 { error make {msg: 'Could not list Translate Shell languages.'} }
+  let choice = ($languages.stdout | lines | prepend 'auto       Automatic EN ↔ RU / source detection' | input list --fuzzy 'Language (type to search, Esc cancels)')
+  if $choice == null { return null }
+  $choice | split words | first
+}
+
+def translate-copy [text: string] {
+  if $text == '' { error make {msg: 'Translate something first.'} }
+  if (which wl-copy | is-empty) {
+    error make {msg: 'Copy requires wl-clipboard (wl-copy) and Wayland.'}
+  }
+  let result = ($text | ^wl-copy | complete)
+  if $result.exit_code != 0 { error make {msg: ($result.stderr | str trim)} }
+}
+
+def translate-help [] {
+  print 'Enter text · Alt+Enter for multiple lines · ↑/↓ for session history
+:to          Fuzzy target language picker (or :to de)
+:from        Fuzzy source language picker (or :from ru)
+:auto        Reset both languages to auto
+:copy        Copy the last result (Wayland)
+:help        Show this help
+:q           Quit (also Ctrl+D or Ctrl+C)
+Text is sent to Google. No history is saved to disk.'
+}
+
+def translate-interactive [initial_source: string, initial_target: string] {
+  mut source = $initial_source
+  mut target = $initial_target
+  mut history = []
+  mut last = ''
+  print 'Google Translate · EN ↔ RU'
+  print 'Enter text · :to / :from pick languages · :help · Ctrl+D to quit'
+  loop {
+    let direction = if $source == 'auto' and $target == 'auto' { 'EN ↔ RU' } else { $'($source) → ($target)' }
+    let entered = ($history | input --reedline $'[($direction)] > ')
+    if $entered == null { return }
+    let text = ($entered | str trim)
+    if $text == '' { continue }
+    # Session-only history, capped at 100 entries; never saved to disk.
+    $history = ($history | append $text | last 100)
+    if $text in [':q' ':quit'] { return }
+    try {
+      if $text == ':help' { translate-help; continue }
+      if $text == ':auto' { $source = 'auto'; $target = 'auto'; continue }
+      if $text == ':copy' { translate-copy $last; print 'Copied.'; continue }
+      if $text =~ '^:(to|from)(\s|$)' {
+        let command = ($text | split row --regex '\s+' | first)
+        let value = ($text | str replace --regex '^:\w+\s*' '')
+        let selected = if $value == '' { translate-pick-language } else { translate-language $value }
+        if $selected != null {
+          if $command == ':to' { $target = $selected } else { $source = $selected }
+        }
+        continue
+      }
+      if ($text | str starts-with ':') {
+        error make {msg: 'Unknown command. Use :help, or pass literal text as a CLI argument.'}
+      }
+      let actual_target = (translate-target $text $source $target)
+      print $'  ($source) → ($actual_target) …'
+      $last = (translate-run $text $source $actual_target)
+      print $last
+      print ''
+    } catch {|err|
+      print --stderr $'translate: ($err.msg)'
+    }
+  }
+}
+
+# Google Translate with automatic English ↔ Russian direction.
+# No arguments: prompt on a terminal, otherwise translate all piped stdin.
+# Examples: translate hello world; translate --to de 'Good morning'
+def main [
+  --to (-t): string = 'auto' # Target language code; auto switches EN ↔ RU.
+  --from (-f): string = 'auto' # Source language code; auto lets Google detect it.
+  ...text: string # Text to translate; use -- before text starting with -.
+] {
+  if (which trans | is-empty) {
+    print --stderr 'translate: Install Translate Shell: sudo pacman -S translate-shell (or desktop-sync -u).'
+    exit 1
+  }
+  let source = (translate-language $from)
+  let target = (translate-language $to)
+  if ($text | is-empty) and (is-terminal --stdin) {
+    translate-interactive $source $target
+    return
+  }
+  let content = if ($text | is-empty) { open --raw /dev/stdin | into string } else { $text | str join ' ' }
+  if ($content | str trim | is-empty) {
+    print --stderr 'translate: No text to translate.'
+    exit 1
+  }
+  try {
+    translate-run $content $source (translate-target $content $source $target) | print
+  } catch {|err|
+    print --stderr $'translate: ($err.msg)'
+    exit 1
+  }
+}

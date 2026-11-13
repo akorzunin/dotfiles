@@ -9,6 +9,7 @@ alias f = fzf
 alias y = yazi
 def cl [] { clear; reset }
 alias py = python
+alias t = ^translate
 alias h = htop
 # List processes by resident memory usage
 def memtop [count: int = 10] {
@@ -217,12 +218,13 @@ def desktop-sync [
 ] {
   def check_repo [repo_path: path, name: string, pull: bool] {
     print -n $"(ansi green)($name) config:(ansi reset)"
-    if $pull {
-      git -C $repo_path pull --rebase --autostash | ignore
+    let sync_result = (if $pull {
+      git -C $repo_path pull --rebase --autostash | complete
     } else {
-      git -C $repo_path fetch | ignore
-    }
-    if $env.LAST_EXIT_CODE != 0 {
+      git -C $repo_path fetch | complete
+    })
+    if $sync_result.stderr != '' { print --stderr -n $sync_result.stderr }
+    if $sync_result.exit_code != 0 {
       error make {msg: $"Failed to sync ($name)"}
     }
     print -n $" (git -C $repo_path rev-parse --abbrev-ref HEAD) "
@@ -236,6 +238,13 @@ def desktop-sync [
   check_repo ~/Documents/hyprconf/ "Hyprland" $pull
   check_repo ~/Documents/dotfiles/ "Dotfiles" $pull
   if $update {
+    if (which trans | is-empty) {
+      try {
+        do --capture-errors { ^sudo pacman -S --needed translate-shell }
+      } catch {
+        error make {msg: "Translate Shell installation failed"}
+      }
+    }
     # Load setup from disk so -pu uses the freshly pulled version.
     cd ~/Documents/dotfiles/
     ^nu --no-config-file update.nu

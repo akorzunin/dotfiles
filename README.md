@@ -46,6 +46,40 @@ checkout, or desktop packages are required on a server.
   After initialization, use `--schedule 30s` for autosync and `--check` for status.
   For setup and SSH browser authorization, see `dot_local/bin/dropbox-sync.md`.
 
+## Google Translate
+
+`desktop-sync -pu` installs `translate-shell` with pacman when missing and links
+the wrapper. Restart Nushell after pulling to load the `t` alias. Alternatively,
+install `translate-shell` yourself and run `nu --no-config-file update.nu`.
+`t` calls the Nushell script `~/.local/bin/translate`:
+
+```nu
+t                        # Interactive prompt; ↑/↓ for session history
+t hello world            # English → Russian
+t 'Привет, мир'           # Russian → English
+t --to de 'Good morning'  # Override target language
+t --from ru --to en 'мир' # Override both languages
+"Hello\nworld" | t        # Translate piped text as one request
+```
+
+The default target uses a Russian/Latin letter majority (ties → Russian), not
+full language detection. Google detects the source; use `--to` for mixed text
+or other languages. In the Reedline prompt, `:to`/`:from` open Nushell's fuzzy
+language picker; `:to de`/`:from ru` set codes directly, and `:auto` resets them.
+Alt+Enter inserts a newline. `:copy` copies the last result using `wl-copy`.
+`:help` lists commands; `:q`, Ctrl+D or Ctrl+C quits. Translation errors leave
+the prompt open to retry. The last 100 inputs stay in memory only; text is sent to Google via
+Translate Shell's unofficial Google backend (no API key, subject to service
+changes/rate limits). Full Translate Shell output is preserved, including
+pronunciation, definitions and alternatives when available; `:copy` copies this
+full result too.
+
+In the separate Hyprconf repo, `niri/config.kdl` binds **Mod+Shift+T** to the same
+tool in a focused floating Kitty window. CLI translation needs Nushell,
+Translate Shell and `timeout` (coreutils). The desktop shortcut additionally
+needs Kitty/Niri; copying needs `wl-clipboard`. The plain `update.nu` linker
+does not install translation packages on minimal servers; `desktop-sync -u` does.
+
 ## SSH inventory selector
 
 ```sh
