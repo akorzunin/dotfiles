@@ -56,9 +56,11 @@ They do not contain VPN credentials or replace `/etc/sing-box/config.json`.
 `00-local-udp.json` is the existing transparent UDP overlay: UID **1000**, interface
 `sing-udp`, address `172.19.0.1/30`. Adjust UID/address if necessary; do not install
 a duplicate TUN overlay if one already exists. It preserves the existing Steam,
-TCP/ICMP, DNS, and private-network bypass rules. `00-00-zapret.json` sorts first
-and exempts Discord/Vesktop plus the target domains from remote proxy routing.
-Only UDP 443 is sniffed here; unrelated UDP is not delayed by extra sniffing.
+TCP/ICMP, DNS, and private-network bypass rules. `00-00-00-twitch.json` and
+`00-00-00-youtube.json` sort first: Twitch uses VPN for its site/API and direct
+for stream media; YouTube stays direct. `00-00-zapret.json` exempts Discord/Vesktop
+from remote proxy routing. Only UDP 443 is sniffed here; unrelated UDP is not
+delayed by extra sniffing.
 
 ```sh
 # Back up existing versions before replacement, if present.
@@ -70,6 +72,54 @@ sudo systemctl restart sing-box
 These separate overlay files survive subscription updates. Other proxy traffic
 keeps its original routing. Even an app explicitly using the local HTTP proxy
 gets a direct upstream connection for the listed domains.
+
+### Edit YouTube routing
+
+The standalone `/etc/sing-box/00-00-00-youtube.json` contains the YouTube domain
+list (including video CDN and image hosts). Subdomains match automatically.
+`"outbound": "direct"` means local proxy → direct ISP connection, with the running
+zapret service handling DPI bypass; no VPN outbound is used. This applies to
+HTTP CONNECT and SOCKS requests that supply a hostname. IP-only requests without
+a sniffable hostname cannot match a domain rule.
+
+```sh
+sudoedit /etc/sing-box/00-00-00-youtube.json
+sudo sing-box check -C /etc/sing-box && sudo systemctl restart sing-box
+```
+
+Change the single `outbound` value to `proxy` to send YouTube through the selected
+VPN again. Keep this file before other routing overlays; subscription updates
+replace only `config.json`. When adding new domains for direct DPI bypass, also
+update `/opt/zapret/hosts-youtube.txt` and restart zapret. The tracked source is
+`etc/zapret/sing-box/00-00-00-youtube.json`.
+
+### Edit Twitch routing
+
+`/etc/sing-box/00-00-00-twitch.json` splits Twitch routing:
+
+- **VPN (`proxy`)**: `twitch.tv` (including API/player), assets/extensions, and
+  `usher.ttvnw.net` (stream selection/master playlists).
+- **Direct**: remaining `ttvnw.net` hosts, including live-stream media edges.
+
+Keep the VPN rule **before** the general `ttvnw.net` direct rule so Usher uses the
+VPN. Edit the rules' `domain_suffix` lists or `outbound` values independently.
+Subdomains match automatically; the same hostname-matching limits as YouTube apply.
+
+```sh
+sudoedit /etc/sing-box/00-00-00-twitch.json
+sudo sing-box check -C /etc/sing-box && sudo systemctl restart sing-box
+```
+
+This hostname split aims to obtain quality choices through the VPN while keeping
+bulk live-stream traffic direct. It cannot split HTTPS paths on the same host.
+Other media domains (for example shared VOD/clip CDNs) are not automatically
+classified as direct. Twitch may check the media IP or bind tokens to an IP, so
+quality availability and playback need browser verification; they are not guaranteed.
+Reload Twitch after applying to obtain new player tokens/playlists.
+
+No Twitch-specific zapret profile is installed; the direct rule does not itself
+enable DPI manipulation for Twitch.
+The tracked source is `etc/zapret/sing-box/00-00-00-twitch.json`.
 
 ### Vesktop
 
@@ -183,10 +233,12 @@ curl --noproxy '*' --max-time 8 https://discord.com/api/v10/gateway
 curl --noproxy '*' --http3-only --max-time 8 -o /dev/null https://www.youtube.com/
 ```
 
-To restore the old proxy behavior, disable the **new target-exception overlay**
+To restore the old proxy behavior, disable **all target-exception overlays**
 first, leaving the pre-existing local UDP overlay in place:
 
 ```sh
+sudo mv /etc/sing-box/00-00-00-twitch.json /etc/sing-box/00-00-00-twitch.disabled
+sudo mv /etc/sing-box/00-00-00-youtube.json /etc/sing-box/00-00-00-youtube.disabled
 sudo mv /etc/sing-box/00-00-zapret.json /etc/sing-box/00-00-zapret.disabled
 sudo sing-box check -C /etc/sing-box
 sudo systemctl restart sing-box

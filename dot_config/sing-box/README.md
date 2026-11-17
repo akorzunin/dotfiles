@@ -165,8 +165,15 @@ gsettings set org.gnome.system.proxy mode 'none'
 ### Direct Discord / YouTube with zapret
 
 The optional [zapret setup](../../etc/zapret/README.md) saves the tested strategies
-and separate `00-00-zapret.json` / `00-local-udp.json` overlays. It keeps those
-services direct, including requests to the local HTTP proxy, while preserving
+and separate `00-00-00-youtube.json`, `00-00-zapret.json`, and `00-local-udp.json`
+overlays. An independent `00-00-00-twitch.json` overlay sends Twitch's site/API,
+assets, and `usher.ttvnw.net` stream selection through the VPN, then routes other
+`ttvnw.net` media hosts directly. Keep the Usher exception before the media rule.
+Quality availability still needs browser verification; Twitch may also check the
+media connection's IP. No Twitch-specific zapret profile is installed.
+Edit each overlay's domain lists or `outbound` values (`direct` or `proxy`), then
+validate with `sudo sing-box check -C /etc/sing-box` and restart sing-box.
+These rules also apply to requests sent to the local HTTP proxy, preserving
 other proxy routing. The overlays do not contain private VPN outbounds and
 survive subscription refreshes. Install explicitly; general dotfiles setup does
 not change system-wide DPI bypass rules.

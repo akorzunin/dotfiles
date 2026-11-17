@@ -1,0 +1,18 @@
+{
+  "route": {
+    "rules": [
+      {
+        "domain_suffix": [
+          "twitch.tv", "usher.ttvnw.net", "jtvnw.net", "twitchcdn.net", "ext-twitch.tv"
+        ],
+        "action": "route",
+        "outbound": "proxy"
+      },
+      {
+        "domain_suffix": ["ttvnw.net"],
+        "action": "route",
+        "outbound": "direct"
+      }
+    ]
+  }
+}

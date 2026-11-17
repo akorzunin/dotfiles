@@ -17,10 +17,7 @@
         "inbound": "local-udp-in",
         "domain_suffix": [
           "discord.com", "discord.gg", "discordapp.com", "discordapp.net",
-          "discord.media", "discordcdn.com", "discord.dev", "dis.gd",
-          "youtube.com", "youtu.be", "youtube-nocookie.com", "googlevideo.com",
-          "ytimg.com", "ggpht.com", "youtubei.googleapis.com",
-          "youtube.googleapis.com", "yt3.googleusercontent.com"
+          "discord.media", "discordcdn.com", "discord.dev", "dis.gd"
         ],
         "action": "bypass",
         "outbound": "direct"
@@ -28,10 +25,7 @@
       {
         "domain_suffix": [
           "discord.com", "discord.gg", "discordapp.com", "discordapp.net",
-          "discord.media", "discordcdn.com", "discord.dev", "dis.gd",
-          "youtube.com", "youtu.be", "youtube-nocookie.com", "googlevideo.com",
-          "ytimg.com", "ggpht.com", "youtubei.googleapis.com",
-          "youtube.googleapis.com", "yt3.googleusercontent.com"
+          "discord.media", "discordcdn.com", "discord.dev", "dis.gd"
         ],
         "action": "route",
         "outbound": "direct"
