@@ -53,6 +53,15 @@ test("package exposes only the adapter and no notification skills", () => {
   assert.deepEqual(manifest.pi.skills, []);
 });
 
+test("questions are configured to send native notifications even when focused", () => {
+  const config = JSON.parse(readFileSync(new URL("../../../../../dot_unipi/config/notify/config.json", import.meta.url), "utf8"));
+  assert.equal(config.events.ask_user_prompt.enabled, true);
+  assert.deepEqual(config.defaultPlatforms, ["native"]);
+  assert.deepEqual(config.events.ask_user_prompt.platforms, []);
+  assert.equal(config.native.enabled, true);
+  assert.equal(config.native.suppressWhenFocused, false);
+});
+
 test("completion is configured only at the fully settled boundary", () => {
   const config = JSON.parse(readFileSync(new URL("../../../../../dot_unipi/config/notify/config.json", import.meta.url), "utf8"));
   assert.equal(config.events.agent_end.enabled, false);

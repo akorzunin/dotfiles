@@ -16,6 +16,8 @@ npm test
 
 `~/.unipi/config/notify/config.json` enables `agent_settled`, not `agent_end`, so
 completion notifications wait for retries, compaction and queued work to finish.
+It also enables `ask_user_prompt`, so `ask_user_question` notifies when it opens
+its questionnaire, using the tool's `rpiv:ask-user:prompt` event.
 `../notify-sound.ts` plays the configured WAV after a successful, unsuppressed
 native notification. Failed/aborted assistant runs keep the existing sound
 suppression behavior.

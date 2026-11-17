@@ -32,7 +32,7 @@
       "platforms": []
     },
     "ask_user_prompt": {
-      "enabled": false,
+      "enabled": true,
       "platforms": []
     }
   },
