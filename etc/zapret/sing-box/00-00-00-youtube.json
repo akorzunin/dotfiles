@@ -1,0 +1,44 @@
+{
+  "dns": {
+    "servers": [
+      {
+        "type": "local",
+        "tag": "zapret-system"
+      },
+      {
+        "type": "https",
+        "tag": "youtube-doh",
+        "server": "8.8.8.8",
+        "tls": {
+          "enabled": true,
+          "server_name": "dns.google"
+        }
+      }
+    ],
+    "final": "zapret-system"
+  },
+  "route": {
+    "default_domain_resolver": "zapret-system",
+    "rules": [
+      {
+        "domain_suffix": [
+          "youtube.com", "youtu.be", "youtube-nocookie.com", "googlevideo.com",
+          "ytimg.com", "ggpht.com", "youtubei.googleapis.com",
+          "youtube.googleapis.com", "yt3.googleusercontent.com"
+        ],
+        "action": "resolve",
+        "server": "youtube-doh",
+        "strategy": "ipv4_only"
+      },
+      {
+        "domain_suffix": [
+          "youtube.com", "youtu.be", "youtube-nocookie.com", "googlevideo.com",
+          "ytimg.com", "ggpht.com", "youtubei.googleapis.com",
+          "youtube.googleapis.com", "yt3.googleusercontent.com"
+        ],
+        "action": "route",
+        "outbound": "direct"
+      }
+    ]
+  }
+}

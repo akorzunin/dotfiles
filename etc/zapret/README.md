@@ -7,6 +7,20 @@ stability trial. Longer-term ISP behavior can change.
 No remote proxy is used for these services. Existing sing-box routing for other
 sites is preserved.
 
+## YouTube DNS bypass after ISP change
+
+On 2026-11-17, the new ISP returned false NXDOMAIN answers for YouTube over
+UDP DNS, including queries to public resolvers. The
+`sing-box/00-00-00-youtube.json` overlay resolves YouTube hostnames using Google
+DNS over HTTPS directly at `8.8.8.8`, then routes connections directly through
+zapret. Neither DNS nor video traffic needs a VPN. Other sing-box lookups retain
+the system resolver; system-wide DNS outside sing-box is unchanged.
+
+This fixes DNS poisoning, **not all CDN filtering**: direct 10 MiB media ranges
+reached about 10 MB/s, but repeated CDN TLS tests still stalled intermittently.
+The existing zapret strategies and Discord configuration were not changed.
+Further CDN strategy tuning is needed before calling direct playback reliable.
+
 ## Reproduce
 
 This is opt-in system setup, **not** part of `update.nu`. Review the configs first:
