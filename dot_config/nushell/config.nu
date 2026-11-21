@@ -380,7 +380,7 @@ def nt [msg: string = 'Done!'] {
 def nt-hist [] {
     dunstctl history | from json | get data | select message.data | get 'message.data' | first | each {|e| $e | str replace -a -r '<.+?>' ""} | reverse
 }
-def type [q: string, --all(-a)] {
+def _type [q: string, --all(-a)] {
     if $all {
       which -a $q | to yaml | bat -l yaml
       return
