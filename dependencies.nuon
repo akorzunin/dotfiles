@@ -1,0 +1,12 @@
+# Add pacman packages here; command is the executable used to check installation.
+# Common dependencies are installed by update.nu and desktop-sync -u.
+{
+  common: [
+    {command: python, package: python}
+    {command: delta, package: git-delta}
+  ]
+  # Desktop-only dependencies are installed by desktop-sync -u (update.nu --desktop).
+  desktop: [
+    {command: trans, package: translate-shell}
+  ]
+}

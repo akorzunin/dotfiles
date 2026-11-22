@@ -25,9 +25,40 @@ Repo module imports resolve beside the real config file, so newly pulled modules
 work before setup creates their individual links. This does not hide syntax
 errors: use the config-free shell to repair those.
 
-Setup links the configs and scripts. Python is the only additional required
-package; if absent, setup installs it with `sudo pacman`. No AUR helper, desktop
-checkout, or desktop packages are required on a server.
+Setup installs missing common dependencies with `sudo pacman -S --needed`, then
+links the configs and scripts. No AUR helper, desktop checkout, or desktop
+packages are required on a server.
+
+### Adding dependencies
+
+Edit [`dependencies.nuon`](dependencies.nuon) to declare packages:
+
+```nuon
+{
+  common: [
+    {command: python, package: python}
+    {command: delta, package: git-delta}
+  ]
+  desktop: [
+    {command: trans, package: translate-shell}
+  ]
+}
+```
+
+Add a row to `common` for tools needed everywhere, or `desktop` for desktop-only
+tools. `command` is the executable checked on PATH; `package` is its **pacman
+package name** (for example, `delta` comes from `git-delta`). Only missing commands
+trigger installation; this does not perform a system upgrade or remove packages.
+A failed installation stops setup before linking.
+
+- `nu --no-config-file update.nu` (or `sh install.sh`): install `common`.
+- `nu --no-config-file update.nu --desktop`: install both lists.
+- `desktop-sync -pu`: pull repositories, then run the freshly pulled updater
+  with both lists. `desktop-sync -u` fetches instead of pulling.
+
+Only official pacman packages are supported; install AUR packages separately.
+
+### Optional integrations
 
 - oh-my-posh, zoxide and Carapace are optional. Without them, Nu keeps its default
   prompt/completions and `cd` works normally.
@@ -35,7 +66,8 @@ checkout, or desktop packages are required on a server.
   existing ones. After installing either tool, rerun setup and restart Nu.
 - `c` enables installed Carapace. If its cache is deleted, Nu still starts; rerun
   setup and restart Nu to restore completions.
-- Other aliases require their tools only when invoked; setup does not install them.
+- Other aliases require their tools only when invoked; add those tools to the
+  dependency list if you want setup to install them.
 - The Hyprconf picker hook runs only with a Wayland session, its checkout and `yay`.
 - `desktop-sync -pu`: pull, then apply the newly pulled setup. This desktop helper
   requires the Neovim, Hyprconf and dotfiles repositories; servers can run

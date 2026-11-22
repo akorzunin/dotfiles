@@ -19,6 +19,9 @@ class BootstrapTest(unittest.TestCase):
                                  ("python", sys.executable), ("sh", shutil.which("sh")),
                                  ("dirname", shutil.which("dirname"))):
             (bin_dir / name).symlink_to(executable)
+        delta = bin_dir / "delta"
+        delta.write_text("#!/bin/sh\nexit 0\n")
+        delta.chmod(0o755)
         env = dict(os.environ, HOME=str(home), PATH=str(bin_dir),
                    XDG_CONFIG_HOME=str(home / ".config"),
                    XDG_CACHE_HOME=str(home / ".cache"),
@@ -74,8 +77,8 @@ class BootstrapTest(unittest.TestCase):
             # Idempotent without installing packages or requiring Hyprconf.
             self.run_nu(env, "--no-config-file", "update.nu")
 
-    def test_desktop_sync_installs_translation_only_when_missing(self):
-        for mode in ("missing", "installed", "failure", "sync-failure"):
+    def test_desktop_sync_delegates_to_fresh_updater(self):
+        for mode in ("success", "failure", "sync-failure"):
             with self.subTest(mode=mode), tempfile.TemporaryDirectory() as temporary:
                 home = Path(temporary)
                 env = self.server_env(home)
@@ -84,38 +87,61 @@ class BootstrapTest(unittest.TestCase):
                 (config_dir / "config.nu").symlink_to(ROOT / "dot_config/nushell/config.nu")
                 checkout = home / "Documents/dotfiles"
                 checkout.mkdir(parents=True)
-                (checkout / "update.nu").write_text('print "UPDATED"\n')
+                (checkout / "update.nu").write_text(
+                    'def main [--desktop] {\n'
+                    '  if not $desktop { error make {msg: "missing desktop flag"} }\n'
+                    + ('  error make {msg: "dependency failure"}\n' if mode == "failure"
+                       else '  print "UPDATED"\n') + '}\n')
                 git = home / "bin/git"
                 git.write_text(f"#!{sys.executable}\nimport sys\n"
                                "if 'rev-parse' in sys.argv: print('main')\n"
                                "if '--porcelain=v2' in sys.argv: print('# branch.ab +0 -0')\n"
                                f"if 'pull' in sys.argv: sys.exit({1 if mode == 'sync-failure' else 0})\n")
                 git.chmod(0o755)
-                marker = home / "installed"
-                trans = home / "bin/trans"
-                sudo = home / "bin/sudo"
-                sudo.write_text(f"#!{sys.executable}\nfrom pathlib import Path\nimport sys\n"
-                                "assert sys.argv[1:] == ['pacman', '-S', '--needed', 'translate-shell']\n"
-                                f"Path({str(marker)!r}).write_text('called')\n"
-                                f"sys.exit({1 if mode == 'failure' else 0})\n")
-                sudo.chmod(0o755)
-                if mode == "installed":
-                    trans.write_text('#!/bin/sh\nexit 0\n')
-                    trans.chmod(0o755)
                 result = subprocess.run(
                     [str(home / "bin/nu"), "--no-config-file", "-c",
                      f'source "{config_dir / "config.nu"}"; desktop-sync -pu'],
                     cwd=ROOT, env=env, text=True, capture_output=True, timeout=30,
                 )
-                self.assertEqual(marker.exists(), mode in ("missing", "failure"), result.stderr + result.stdout)
                 if mode in ("failure", "sync-failure"):
                     self.assertNotEqual(result.returncode, 0)
-                    expected = "Failed to sync Neovim" if mode == "sync-failure" else "Translate Shell installation failed"
+                    expected = "Failed to sync Neovim" if mode == "sync-failure" else "Dotfiles update failed"
                     self.assertIn(expected, result.stderr)
                     self.assertNotIn("UPDATED", result.stdout)
                 else:
                     self.assertEqual(result.returncode, 0, result.stderr + result.stdout)
                     self.assertIn("UPDATED", result.stdout)
+
+    def test_manifest_installs_missing_packages_and_stops_on_failure(self):
+        for mode in ("common", "desktop", "installed", "failure"):
+            with self.subTest(mode=mode), tempfile.TemporaryDirectory() as temporary:
+                home = Path(temporary)
+                env = self.server_env(home)
+                if mode != "installed":
+                    (home / "bin/delta").unlink()
+                marker = home / "installed"
+                packages = ["git-delta"]
+                if mode == "desktop":
+                    packages.append("translate-shell")
+                sudo = home / "bin/sudo"
+                sudo.write_text(
+                    f"#!{sys.executable}\nimport pathlib, sys\n"
+                    f"assert sys.argv[1:] == {['pacman', '-S', '--needed', *packages]!r}\n"
+                    f"pathlib.Path({str(marker)!r}).write_text('called')\n"
+                    f"sys.exit({1 if mode == 'failure' else 0})\n")
+                sudo.chmod(0o755)
+                args = ["--desktop"] if mode == "desktop" else []
+                result = subprocess.run(
+                    [str(home / "bin/nu"), "--no-config-file", "update.nu", *args],
+                    cwd=ROOT, env=env, text=True, capture_output=True, timeout=30)
+                self.assertEqual(marker.exists(), mode != "installed", result.stderr + result.stdout)
+                if mode == "failure":
+                    self.assertNotEqual(result.returncode, 0)
+                    self.assertIn("Dependency installation failed: git-delta", result.stderr)
+                    self.assertFalse((home / ".config/nushell/config.nu").exists())
+                else:
+                    self.assertEqual(result.returncode, 0, result.stderr + result.stdout)
+                    self.assertTrue((home / ".config/nushell/config.nu").is_symlink())
 
     def test_config_only_link_loads_repo_modules_before_update(self):
         with tempfile.TemporaryDirectory() as temporary:

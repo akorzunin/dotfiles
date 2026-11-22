@@ -238,17 +238,11 @@ def desktop-sync [
   check_repo ~/Documents/hyprconf/ "Hyprland" $pull
   check_repo ~/Documents/dotfiles/ "Dotfiles" $pull
   if $update {
-    if (which trans | is-empty) {
-      try {
-        do --capture-errors { ^sudo pacman -S --needed translate-shell }
-      } catch {
-        error make {msg: "Translate Shell installation failed"}
-      }
-    }
-    # Load setup from disk so -pu uses the freshly pulled version.
+    # Load setup and its dependency list from disk so -pu uses the freshly pulled version.
     cd ~/Documents/dotfiles/
-    ^nu --no-config-file update.nu
-    if $env.LAST_EXIT_CODE != 0 {
+    try {
+      do --capture-errors { ^nu --no-config-file update.nu --desktop }
+    } catch {
       error make {msg: "Dotfiles update failed"}
     }
   }

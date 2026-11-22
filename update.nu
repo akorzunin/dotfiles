@@ -1,9 +1,19 @@
 # Run from the dotfiles repository root: nu --no-config-file update.nu
-# Python is the only linking dependency; optional shell/desktop tools are not installed.
-if (which python | is-empty) {
-  ^sudo pacman -S --needed python
-  if $env.LAST_EXIT_CODE != 0 {
-    error make {msg: "Dependency installation failed"}
+def main [
+  --desktop  # Also install desktop dependencies from dependencies.nuon
+] {
+let dependencies = (open dependencies.nuon)
+let selected = if $desktop {
+  $dependencies.common | append $dependencies.desktop
+} else {
+  $dependencies.common
+}
+let missing = ($selected | where {|dep| which $dep.command | is-empty } | get package | uniq)
+if not ($missing | is-empty) {
+  try {
+    do --capture-errors { ^sudo pacman -S --needed ...$missing }
+  } catch {
+    error make {msg: $"Dependency installation failed: ($missing | str join ', ')"}
   }
 }
 
@@ -99,4 +109,5 @@ if ("WAYLAND_DISPLAY" in $env) and ($picker | path exists) and not (which yay | 
   if $env.LAST_EXIT_CODE != 0 {
     error make {msg: "Hyprconf Yazi file picker setup failed"}
   }
+}
 }
