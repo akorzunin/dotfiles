@@ -80,6 +80,12 @@ for relative in ($configs | append $scripts) {
   }
 }
 
+# Install Pi if missing and reconcile its curated extension setup.
+^python ./dot_pi/agent/setup.py
+if $env.LAST_EXIT_CODE != 0 {
+  error make {msg: "Pi setup failed; fix the reported error and rerun update.nu"}
+}
+
 # Install the pinned Git plugin once; leave Yazi optional on minimal servers.
 let yazi_config = ($env.HOME | path join .config/yazi)
 if not (which ya | is-empty) and not ($yazi_config | path join plugins/git.yazi/main.lua | path exists) {

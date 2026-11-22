@@ -1,20 +1,5 @@
 #!/usr/bin/env nu
 
-# Pin temporary (-e) npm extensions: ranges trigger registry checks on every launch.
-# Upgrade deliberately by changing these versions; Pi installs missing versions on launch.
-let always_extensions = [
-    ($nu.home-dir | path join ".pi/agent/extensions/notify-sound.ts")
-    "npm:pi-web-access@0.38.0"
-    "npm:@juicesharp/rpiv-ask-user-question@2.15.0"
-    ($nu.home-dir | path join ".pi/agent/extensions/notify-auto")
-    "npm:pi-codex-limit@1.8.2"
-]
-
-let subagent_extensions = [
-  # "npm:@jerryan/pi-subagent-lite"
-  "npm:pi-subagents-lite@1.16.0"
-]
-
 def --wrapped main [
     --default
     --edit
@@ -22,6 +7,20 @@ def --wrapped main [
     --subagent
     ...args: string
 ] {
+    let agent_dir = ($env.PI_CODING_AGENT_DIR? | default ($nu.home-dir | path join ".pi/agent") | path expand)
+    let manifest = (open ($agent_dir | path join extensions.json))
+    let always_extensions = ($manifest.always | each {|source|
+        if ($source | str starts-with "npm:") { $source } else { $agent_dir | path join $source }
+    })
+    let subagent_extensions = $manifest.subagent
+    # Pin known opt-in sources too, but leave arbitrary user extensions untouched.
+    let args = ($args | enumerate | each {|item|
+        if $item.index > 0 and (($args | get ($item.index - 1)) in [-e --extension]) {
+            $manifest.optional | where {|source| ($source | str replace -r '@[0-9]+\.[0-9]+\.[0-9]+$' '') == $item.item } | get -o 0 | default $item.item
+        } else {
+            $item.item
+        }
+    })
     let is_child = (($env.PI_SUBAGENT_CHILD? | default "") != "")
     let mode = if $is_child {
         "edit"

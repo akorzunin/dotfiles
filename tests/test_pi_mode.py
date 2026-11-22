@@ -17,6 +17,7 @@ class PiModeTests(unittest.TestCase):
         self.addCleanup(self.temp.cleanup)
         root = Path(self.temp.name)
         self.capture = root / "args.json"
+        shutil.copy2(SCRIPT.parents[2] / "dot_pi/agent/extensions.json", root / "extensions.json")
         pi = root / "pi"
         pi.write_text("#!/usr/bin/env python3\nimport json, os, sys\n"
                       "from pathlib import Path\n"
@@ -48,6 +49,20 @@ class PiModeTests(unittest.TestCase):
                 for source in npm_sources:
                     self.assertRegex(source, r"^npm:(?:@[^/]+/)?[^@]+@\d+\.\d+\.\d+$")
                 self.assertNotIn("--offline", args)
+
+    def test_omniroute_is_opt_in_and_pinned(self):
+        self.assertFalse(any("omniroute" in arg for arg in self.invoke()))
+        args = self.invoke("-e", "npm:omniroute-pi-ext-integration", "--model", "cx/gpt-6.1-sol-high")
+        self.assertEqual(args[-4:], ["-e", "npm:omniroute-pi-ext-integration@2.0.1",
+                                    "--model", "cx/gpt-6.1-sol-high"])
+        self.assertNotIn("--provider", args)
+        custom = self.invoke("-e", "npm:custom-extension@1.0.0")
+        self.assertEqual(custom[-2:], ["-e", "npm:custom-extension@1.0.0"])
+
+    def test_direct_codex_arguments_are_preserved(self):
+        args = self.invoke("--provider", "openai-codex", "--model", "gpt-5.6-sol")
+        self.assertEqual(args[-4:], ["--provider", "openai-codex", "--model", "gpt-5.6-sol"])
+        self.assertFalse(any("omniroute" in arg for arg in args))
 
     def test_no_extensions_skips_explicit_extensions(self):
         for flag in ("--no-extensions", "-ne"):

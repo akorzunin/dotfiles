@@ -1,0 +1,15 @@
+{
+  "always": [
+    "extensions/notify-sound.ts",
+    "npm:pi-web-access@0.38.0",
+    "npm:@juicesharp/rpiv-ask-user-question@2.15.0",
+    "extensions/notify-auto",
+    "npm:pi-codex-limit@1.8.2"
+  ],
+  "subagent": [
+    "npm:pi-subagents-lite@1.16.0"
+  ],
+  "optional": [
+    "npm:omniroute-pi-ext-integration@2.0.1"
+  ]
+}

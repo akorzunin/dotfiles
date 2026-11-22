@@ -19,6 +19,14 @@ class BootstrapTest(unittest.TestCase):
                                  ("python", sys.executable), ("sh", shutil.which("sh")),
                                  ("dirname", shutil.which("dirname"))):
             (bin_dir / name).symlink_to(executable)
+        # Exercise updater integration without installing Pi or mutating shared repo caches.
+        (bin_dir / "python").unlink()
+        wrapper = (f"#!{sys.executable}\nimport os, sys\n"
+                   "if sys.argv[1:2] == ['./dot_pi/agent/setup.py']: sys.exit(0)\n"
+                   f"os.execv({sys.executable!r}, [{sys.executable!r}, *sys.argv[1:]])\n")
+        for name in ("python", "python-bootstrap"):
+            (bin_dir / name).write_text(wrapper)
+            (bin_dir / name).chmod(0o755)
         delta = bin_dir / "delta"
         delta.write_text("#!/bin/sh\nexit 0\n")
         delta.chmod(0o755)
@@ -166,7 +174,7 @@ class BootstrapTest(unittest.TestCase):
             sudo = home / "bin/sudo"
             sudo.write_text(f"#!{sys.executable}\nimport os, pathlib, sys\n"
                             "assert sys.argv[1:] == ['pacman', '-S', '--needed', 'python']\n"
-                            "os.symlink(sys.executable, pathlib.Path(__file__).parent / 'python')\n")
+                            "os.symlink(pathlib.Path(__file__).parent / 'python-bootstrap', pathlib.Path(__file__).parent / 'python')\n")
             sudo.chmod(0o755)
             self.run_nu(env, "--no-config-file", "update.nu")
             self.start_shell(home, env, 'print "STARTUP_OK"')

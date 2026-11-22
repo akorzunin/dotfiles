@@ -1,4 +1,6 @@
 *.json
+!extensions.json
+settings.json.before-dotfiles
 *.jsonl
 .cache/
 tmp/

@@ -50,11 +50,11 @@ $env.PAGER = "/usr/bin/less"
 $env.LESS = "-R --mouse --wheel-lines=3"
 $env.SYSTEMD_PAGER = $env.PAGER
 $env.SYSTEMD_LESS = $env.LESS
-$env.PATH = ($env.PATH | append '~/.local/bin')
+$env.PATH = ($env.PATH | prepend ($nu.home-dir | path join '.local/bin'))
 $env.PATH = ($env.PATH | append '~/.npm-global/bin')
 $env.PATH = ($env.PATH | append '~/go/bin')
 $env.PATH = ($env.PATH | append '~/.local/share/pnpm')
-$env.PATH = ($env.PATH | append '~/.pi/agent/bin')
+$env.PATH = ($env.PATH | prepend ($nu.home-dir | path join '.pi/agent/bin'))
 if not (which oh-my-posh | is-empty) {
   oh-my-posh init nu --config ~/.config/oh-my-posh/base.yaml
 }

@@ -58,6 +58,15 @@ A failed installation stops setup before linking.
 
 Only official pacman packages are supported; install AUR packages separately.
 
+### Pi
+
+`update.nu` also installs Pi if missing using its official installer and prepares
+pinned extensions plus local npm dependencies. Existing Codex authentication and
+model defaults are preserved; OmniRoute stays opt-in via `hpi -e
+npm:omniroute-pi-ext-integration --model cx/gpt-6.1-sol-high`. Setup requires
+network access and Node.js/npm (the installer can offer to install them).
+See [Pi setup](dot_pi/agent/README.md) for migration, gateway setup and updates.
+
 ### Optional integrations
 
 - oh-my-posh, zoxide and Carapace are optional. Without them, Nu keeps its default

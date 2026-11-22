@@ -1,18 +1,76 @@
-# Pi model presets
+# Pi setup and model presets
+
+## Install and reproduce
+
+Run from the dotfiles repository root:
+
+```sh
+nu --no-config-file update.nu
+```
+
+Setup always prepares Pi. It keeps an existing installation; if Pi is absent,
+[`setup.py`](setup.py) downloads and runs the official `https://pi.dev/install.sh`
+installer. Downloading before execution ensures a failed download cannot be
+hidden by a successful `sh` exit. The official installer manages its own release
+lockfile and optional Node.js installation; installing missing Node/npm may
+require an interactive terminal. Fresh installs use the current Pi release, not
+a repository-pinned core version. Upgrade the core explicitly with `pi update`.
+
+The updater installs local extension dependencies with `npm ci --omit=dev
+--legacy-peer-deps`, reconciles global packages, and warms all pinned `-e`
+extension caches without sending a model request. It requires network access.
+Pi's managed Node/npm path is included even before restarting your shell.
+
+Existing `auth.json`, `models.json`, provider/model defaults and unrelated
+settings/packages are preserved. The first migration saves
+`settings.json.before-dotfiles`. It removes legacy global UniPi/notify packages
+that duplicate tools, old pi-subagents/pi-intercom packages with invalid host
+runtime dependencies, and global OmniRoute loading. Their files may remain
+cached but are no longer registered. Local bash-scoring dependencies are now
+installed, fixing its missing `@openrouter/sdk` error.
+
+Your credentials and gateway configuration remain machine-local; setup does not
+copy them between machines. Setup links the whole agent directory into the
+checkout, so keep its ignored runtime files private.
 
 ## Startup and extension updates
 
-`pi-mode` pins its npm extensions to exact versions in
-[`dot_local/bin/pi-mode`](../../dot_local/bin/pi-mode). Temporary `-e npm:...`
-extensions with ranges such as `^1.2.3` trigger sequential npm registry checks on
-every launch (up to 10 seconds each on Pi 1.5.0). Exact versions load the cached
-copy without those checks, so `hpi`, `hpie`, and `hpis` do not need `--offline`.
-Normal model and web requests remain enabled.
+[`extensions.json`](extensions.json) is the shared exact-version manifest for
+setup and [`pi-mode`](../../dot_local/bin/pi-mode). `always` packages are also
+registered for plain `pi`; `subagent` and `optional` packages are only loaded when
+requested. `hpi`/`hpie`/`hpis` disable discovery and load their curated list, avoiding
+unrelated global extensions and notification skills.
 
-To upgrade an extension, change its pinned version in `pi-mode` and launch the
-corresponding mode online once. Pi installs missing or mismatched versions;
-subsequent launches use the cache. `pi update --extensions` does not update these
-temporary `-e` sources.
+Temporary `-e npm:...` sources with version ranges trigger registry checks on
+every launch. Exact versions load their cached copy without those checks, so
+these modes do not need `--offline`. Normal model and web requests remain enabled.
+To upgrade an extension, change its version in `extensions.json` and rerun
+`update.nu`. `pi update --extensions` alone does not update temporary `-e` sources.
+
+## OmniRoute or direct Codex
+
+OmniRoute is opt-in, not a global provider override:
+
+```nu
+hpi -e npm:omniroute-pi-ext-integration --model cx/gpt-6.1-sol-high
+```
+
+The wrapper resolves that unversioned extension argument to the manifest's pin
+(currently `2.0.1`). Explicit versions and arbitrary user extensions are passed
+through unchanged. On a fresh machine, start `hpi -e
+npm:omniroute-pi-ext-integration`, run `/omni setup` to enter the gateway URL/key,
+then `/omni sync` to populate models before selecting one. The gateway must be
+running and reachable separately; installing its Pi extension does not deploy it.
+
+For direct Codex subscription access, omit the extension:
+
+```nu
+pi auth login openai-codex
+hpi --provider openai-codex --model <your-codex-model-id>
+```
+
+No OmniRoute endpoint or key is required for this path, and setup does not change
+an existing default provider or model.
 
 ## Modes
 
